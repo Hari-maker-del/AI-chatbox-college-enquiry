@@ -120,3 +120,30 @@ WHERE NOT EXISTS (SELECT 1 FROM public.knowledge_base WHERE title='AI assistant 
 INSERT INTO public.knowledge_base (category,title,content,priority)
 SELECT 'general','Supported topics','Admissions, courses, fees, scholarships, hostel, placements, departments, contact information, academic calendar and college policies.',90
 WHERE NOT EXISTS (SELECT 1 FROM public.knowledge_base WHERE title='Supported topics');
+
+
+-- Harden AI rate limiting against concurrent requests.
+CREATE OR REPLACE FUNCTION public.check_ai_rate_limit(
+  _user_id UUID,
+  _max_requests INTEGER DEFAULT 12,
+  _window_seconds INTEGER DEFAULT 60
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  request_count INTEGER;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(_user_id::text, 918273645));
+  SELECT count(*)::INTEGER
+    INTO request_count
+    FROM public.ai_usage_events
+   WHERE user_id = _user_id
+     AND event_type = 'request'
+     AND created_at > now() - make_interval(secs => _window_seconds);
+  RETURN request_count < _max_requests;
+END;
+$$;
