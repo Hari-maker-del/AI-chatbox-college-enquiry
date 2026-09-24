@@ -1,0 +1,21 @@
+import { useEffect, useState } from "react";
+import { Plus, Pencil, Trash2, Save, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+type Item={id:string;category:string;title:string;content:string;source_url:string|null;language:string;is_published:boolean;priority:number};
+const categories=["admissions","courses","fees","scholarships","hostel","placements","departments","contact","calendar","policies","general"];
+
+export default function AdminKnowledgeBase(){
+  const [items,setItems]=useState<Item[]>([]); const [editing,setEditing]=useState<Partial<Item>|null>(null);
+  const load=async()=>{const {data,error}=await supabase.from("knowledge_base").select("*").order("priority",{ascending:false}).order("updated_at",{ascending:false});if(error)toast.error(error.message);else setItems((data||[]) as Item[]);};
+  useEffect(()=>{load();},[]);
+  const save=async()=>{if(!editing?.title?.trim()||!editing?.content?.trim())return toast.error("Title and content are required.");const payload={category:editing.category||"general",title:editing.title.trim(),content:editing.content.trim(),source_url:editing.source_url||null,language:editing.language||"en",is_published:editing.is_published!==false,priority:Number(editing.priority||0)};const result=editing.id?await supabase.from("knowledge_base").update(payload).eq("id",editing.id):await supabase.from("knowledge_base").insert(payload);if(result.error)toast.error(result.error.message);else{toast.success("Knowledge saved.");setEditing(null);load();}};
+  const remove=async(id:string)=>{if(!confirm("Delete this knowledge item?"))return;const {error}=await supabase.from("knowledge_base").delete().eq("id",id);if(error)toast.error(error.message);else load();};
+  return <div className="space-y-4"><div className="flex justify-end"><Button onClick={()=>setEditing({category:"general",language:"en",is_published:true,priority:0})}><Plus className="mr-2 h-4 w-4"/>Add knowledge</Button></div>
+  {editing&&<div className="rounded-xl border border-border bg-card p-4 space-y-3"><div className="grid gap-3 sm:grid-cols-2"><select className="h-10 rounded-md border bg-background px-3" value={editing.category||"general"} onChange={e=>setEditing({...editing,category:e.target.value})}>{categories.map(c=><option key={c}>{c}</option>)}</select><Input placeholder="Title" value={editing.title||""} onChange={e=>setEditing({...editing,title:e.target.value})}/></div><Textarea className="min-h-40" placeholder="Verified college information..." value={editing.content||""} onChange={e=>setEditing({...editing,content:e.target.value})}/><div className="grid gap-3 sm:grid-cols-3"><Input placeholder="Source URL (optional)" value={editing.source_url||""} onChange={e=>setEditing({...editing,source_url:e.target.value})}/><Input placeholder="Language" value={editing.language||"en"} onChange={e=>setEditing({...editing,language:e.target.value})}/><Input type="number" placeholder="Priority" value={editing.priority??0} onChange={e=>setEditing({...editing,priority:Number(e.target.value)})}/></div><div className="flex gap-2"><Button onClick={save}><Save className="mr-2 h-4 w-4"/>Save</Button><Button variant="outline" onClick={()=>setEditing(null)}><X className="mr-2 h-4 w-4"/>Cancel</Button></div></div>}
+  <div className="overflow-x-auto rounded-xl border border-border"><table className="w-full text-sm"><thead><tr className="border-b bg-muted/50"><th className="p-3 text-left">Title</th><th className="p-3 text-left">Category</th><th className="p-3 text-left">Language</th><th className="p-3 text-left">Status</th><th className="p-3"/></tr></thead><tbody>{items.map(item=><tr key={item.id} className="border-b last:border-0"><td className="p-3 font-medium">{item.title}</td><td className="p-3">{item.category}</td><td className="p-3">{item.language}</td><td className="p-3">{item.is_published?"Published":"Draft"}</td><td className="p-3 text-right"><Button size="icon" variant="ghost" onClick={()=>setEditing(item)}><Pencil className="h-4 w-4"/></Button><Button size="icon" variant="ghost" onClick={()=>remove(item.id)}><Trash2 className="h-4 w-4"/></Button></td></tr>)}</tbody></table></div></div>;
+}
