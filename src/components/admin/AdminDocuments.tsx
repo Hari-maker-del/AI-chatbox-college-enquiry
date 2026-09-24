@@ -32,7 +32,21 @@ export default function AdminDocuments(){
     const inserted=await db.from("knowledge_documents").insert({title:title.trim(),file_name:file.name,storage_path:path,mime_type:file.type,file_size_bytes:file.size,language,category,status:"draft",uploaded_by:user?.id}).select("id").single();
     if(inserted.error){await supabase.storage.from("knowledge-documents").remove([path]);setBusy(false);return toast.error(inserted.error.message);}
     await db.from("admin_audit_logs").insert({admin_user_id:user?.id,action:"upload",entity_type:"knowledge_document",entity_id:inserted.data?.id,metadata:{file_name:file.name}});
-    setTitle("");setFile(null);setBusy(false);toast.success("PDF uploaded as a draft source. It is not used by the AI until processed and published.");load();
+
+    const { data: processed, error: processError } = await supabase.functions.invoke("process-document", {
+      body: { documentId: inserted.data?.id },
+    });
+
+    setTitle("");
+    setFile(null);
+    setBusy(false);
+
+    if (processError || processed?.error) {
+      toast.error(processed?.error || processError?.message || "PDF uploaded, but processing failed. Check the document status.");
+    } else {
+      toast.success("PDF processed, embedded, and published for AI retrieval.");
+    }
+    load();
   };
 
   const remove=async(doc:Doc)=>{
@@ -45,7 +59,7 @@ export default function AdminDocuments(){
   return <div className="space-y-4">
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <h3 className="font-semibold">Source document intake</h3>
-      <p className="text-sm text-muted-foreground">Upload official PDFs here. Documents remain drafts until their text is extracted into verified knowledge chunks and published.</p>
+      <p className="text-sm text-muted-foreground">Upload official PDFs here. Text is extracted, chunked, semantically embedded, and published automatically. Scanned/image-only PDFs require OCR.</p>
       <div className="grid gap-3 sm:grid-cols-2"><Input placeholder="Document title" value={title} onChange={e=>setTitle(e.target.value)}/><Input type="file" accept="application/pdf,.pdf" onChange={e=>setFile(e.target.files?.[0]||null)}/></div>
       <div className="grid gap-3 sm:grid-cols-2"><select className="h-10 rounded-md border bg-background px-3" value={category} onChange={e=>setCategory(e.target.value)}><option>general</option><option>admissions</option><option>courses</option><option>fees</option><option>scholarships</option><option>hostel</option><option>placements</option><option>departments</option><option>contact</option><option>calendar</option><option>policies</option></select><Input placeholder="Language code" value={language} onChange={e=>setLanguage(e.target.value)}/></div>
       <Button disabled={busy} onClick={upload}><FileUp className="mr-2 h-4 w-4"/>{busy?"Uploading...":"Upload PDF"}</Button>
