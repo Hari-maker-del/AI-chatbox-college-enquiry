@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
   try {
     const user=await getUser(req); if(!user) return errorResponse("Authentication required.",401); userId=user.id;
     const body=await req.json(); const messages=cleanMessages(body.messages);
-    const conversationId=typeof body.conversationId==="string"?body.conversationId:null; const language=languageHint(messages);
+    let conversationId=typeof body.conversationId==="string"?body.conversationId:null; const language=languageHint(messages);\n    if(conversationId){const {data:owned}=await admin.from("conversations").select("id").eq("id",conversationId).eq("user_id",user.id).maybeSingle();if(!owned)conversationId=null;}
     const {data:allowed}=await admin.rpc("check_ai_rate_limit",{_user_id:user.id,_max_requests:12,_window_seconds:60});
     if(!allowed){await admin.from("ai_usage_events").insert({user_id:user.id,event_type:"rate_limited",category:"chat"});return errorResponse("Rate limit exceeded. Please try again in a minute.",429);}
     await admin.from("ai_usage_events").insert({user_id:user.id,event_type:"request",category:"chat"});
