@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { suggestions, generateId } from "@/lib/chatResponses";
-import { streamChat } from "@/lib/streamChat";
+import { streamChat, type ChatSource } from "@/lib/streamChat";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import VoiceControls from "@/components/VoiceControls";
 
-interface ChatMessage { id:string; role:"user"|"assistant"; content:string; }
+interface ChatMessage { id:string; role:"user"|"assistant"; content:string; sources?:ChatSource[]; }
 interface ChatInterfaceProps { onBack:()=>void; }
 
 const ChatBubble=({message}:{message:ChatMessage})=>{
@@ -38,7 +38,7 @@ export default function ChatInterface({onBack}:ChatInterfaceProps){
     const userMsg={id:generateId(),role:"user" as const,content:trimmed};
     const history=[...messages.filter(m=>m.id!==messages[0].id),userMsg].map(m=>({role:m.role,content:m.content}));
     setMessages(prev=>[...prev,userMsg]);setInput("");setIsLoading(true);
-    let assistantSoFar="";const assistantId=generateId();
+    let assistantSoFar="";const assistantId=generateId();let sources:ChatSource[]=[];
     try{
       let activeConversation=conversationId;
       if(!activeConversation){
@@ -49,7 +49,7 @@ export default function ChatInterface({onBack}:ChatInterfaceProps){
       await streamChat({messages:history,conversationId:activeConversation,onDelta:(chunk)=>{
         assistantSoFar+=chunk;
         setMessages(prev=>{const last=prev[prev.length-1];if(last?.role==="assistant"&&last.id===assistantId)return prev.map(m=>m.id===assistantId?{...m,content:assistantSoFar}:m);return [...prev,{id:assistantId,role:"assistant",content:assistantSoFar}];});
-      },onDone:()=>setIsLoading(false)});
+      },onSources:(items)=>{sources=items;setMessages(prev=>prev.map(m=>m.id===assistantId?{...m,sources:items}:m));},onDone:()=>setIsLoading(false)});
     }catch(error:any){setIsLoading(false);toast.error(error?.message||"Failed to get AI response");}
   };
 
