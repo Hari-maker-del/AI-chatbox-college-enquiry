@@ -2,6 +2,7 @@ import { GraduationCap, LogIn, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "@/components/NotificationBell";
 
 const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
@@ -28,6 +29,7 @@ const Header = () => {
             <a href="#" className="hover:text-primary transition-colors">Admissions</a>
             <a href="#" className="hover:text-primary transition-colors">Contact</a>
           </nav>
+          {user && <NotificationBell />}
           {user ? (
             <div className="flex items-center gap-2">
               {isAdmin && (

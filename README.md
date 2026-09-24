@@ -1,73 +1,101 @@
-# Welcome to your Lovable project
+# AI College Enquiry Assistant
 
-## Project info
+A production-oriented AI enquiry platform for students and parents. It combines React, Supabase Auth/Postgres/RLS, a secure Edge Function AI gateway, grounded college knowledge, persistent conversations, analytics, and browser voice.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## What is implemented
 
-## How can I edit this code?
+### Phase 1 — Security and correctness
+- Authenticated AI endpoint
+- Server-side provider key
+- Request validation and message limits
+- Per-user rate limiting
+- Conversation ownership validation
+- RLS for user data and admin knowledge
+- Removal of hard-coded college answers from the active chat path
 
-There are several ways of editing your application.
+### Phase 2 — Grounded AI
+- Knowledge-base table with categories and source URLs
+- Retrieval from knowledge base, FAQs, courses and fees
+- Low-temperature grounded generation
+- Explicit unknown-information fallback
+- Same-language response guidance for English, Tamil, Hindi, Telugu, Malayalam and Kannada
+- Streaming responses
 
-**Use Lovable**
+### Phase 3 — Product
+- Persistent conversations
+- Persistent messages
+- Admin knowledge-base editor
+- Admin analytics
+- AI usage/error/latency tracking
+- Notifications data model
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Phase 4 — Production readiness
+- PostgreSQL indexes
+- RLS policies
+- least-privilege grants
+- environment-based AI secret
+- structured migrations
+- production error paths
+- build/lint/test scripts
 
-Changes made via Lovable will be committed automatically to this repo.
+### Phase 5 — Advanced experience
+- Browser speech-to-text
+- Browser text-to-speech
+- Language selector for Indian languages
+- Voice-first chat controls
+- Conversation-aware AI responses
 
-**Use your preferred IDE**
+## Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Vite + React + TypeScript
+- Tailwind CSS + shadcn/ui
+- Supabase Auth + PostgreSQL + Row Level Security
+- Supabase Edge Functions
+- Streaming AI gateway
+- Vitest
+- Web Speech API
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Local setup
 
-Follow these steps:
+1. Use Node.js 20+.
+2. Run npm ci.
+3. Create .env.local with:
+   - VITE_SUPABASE_URL
+   - VITE_SUPABASE_PUBLISHABLE_KEY
+4. Apply Supabase migrations.
+5. Configure the Edge Function secret LOVABLE_API_KEY.
+6. Run npm run dev.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Production setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- Deploy the Supabase migrations.
+- Deploy the chat Edge Function.
+- Configure Auth email/redirect URLs.
+- Replace the seed knowledge records with verified college information.
+- Never put service-role or AI provider secrets in frontend code.
+- Enable database backups.
+- Monitor Edge Function logs and AI usage.
+- Configure HTTPS and a production domain.
+- Test voice support on the browsers/devices you intend to support.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Verification commands
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+npm run lint
+npm test
+npm run build
 
-**Edit a file directly in GitHub**
+## Architecture
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Student browser
+→ Supabase Auth
+→ authenticated chat Edge Function
+→ validation + rate limit
+→ verified knowledge retrieval
+→ AI gateway
+→ streaming response
+→ conversation/message storage
+→ analytics
 
-**Use GitHub Codespaces**
+## Important data policy
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The assistant is intentionally configured not to invent college-specific facts. The admin knowledge base should contain the authoritative admissions, course, fee, scholarship, hostel, placement, department, contact, calendar and policy information for the actual institution.
