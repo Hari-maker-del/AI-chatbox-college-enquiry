@@ -77,7 +77,7 @@ async function getUser(req: Request) {
 async function retrieveKnowledge(query: string) {
   const safe = query.replace(/[%_]/g, " ").slice(0, 160);
 
-  const [knowledge, faqs, courses, fees] = await Promise.all([
+  const [knowledge, chunks, faqs, courses, fees] = await Promise.all([
     admin
       .from("knowledge_base")
       .select("id,category,title,content,source_url,language,priority")
@@ -88,6 +88,11 @@ async function retrieveKnowledge(query: string) {
       })
       .order("priority", { ascending: false })
       .limit(12),
+    admin
+      .from("knowledge_chunks")
+      .select("content,source_title,source_url,language")
+      .textSearch("content", query, { type: "websearch", config: "simple" })
+      .limit(10),
     admin
       .from("faqs")
       .select("question,answer")
@@ -108,6 +113,11 @@ async function retrieveKnowledge(query: string) {
   return [
     ...(knowledge.data || []).map((x: any) => ({
       source: x.title,
+      content: x.content,
+      url: x.source_url,
+    })),
+    ...(chunks.data || []).map((x: any) => ({
+      source: x.source_title,
       content: x.content,
       url: x.source_url,
     })),
