@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type Doc={id:string;title:string;file_name:string;category:string;language:string;status:string;file_size_bytes:number|null;created_at:string};
+type Doc={id:string;title:string;file_name:string;storage_path:string|null;category:string;language:string;status:string;file_size_bytes:number|null;created_at:string};
 
 export default function AdminDocuments(){
   const db:any=supabase;
@@ -38,7 +38,7 @@ export default function AdminDocuments(){
   const remove=async(doc:Doc)=>{
     if(!confirm(`Delete ${doc.file_name}?`))return;
     if(doc.id){await db.from("knowledge_documents").delete().eq("id",doc.id);}
-    if((doc as any).storage_path)await supabase.storage.from("knowledge-documents").remove([(doc as any).storage_path]);
+    if(doc.storage_path)await supabase.storage.from("knowledge-documents").remove([doc.storage_path]);
     await load();
   };
 
