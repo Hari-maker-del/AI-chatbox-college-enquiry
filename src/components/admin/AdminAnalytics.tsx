@@ -3,15 +3,15 @@ import { BarChart3, MessageCircle, Users, AlertTriangle, Clock3 } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 
 export default function AdminAnalytics() {
-  const [stats,setStats]=useState({users:0,messages:0,errors:0,avgLatency:0,today:0});
+  const db:any=supabase; const [stats,setStats]=useState({users:0,messages:0,errors:0,avgLatency:0,today:0});
   useEffect(()=>{const load=async()=>{
     const since=new Date(Date.now()-86400000).toISOString();
     const [{count:users},{count:messages},{count:errors},{data:latency},{count:today}]=await Promise.all([
-      supabase.from("profiles").select("*",{count:"exact",head:true}),
-      supabase.from("messages").select("*",{count:"exact",head:true}),
-      supabase.from("ai_usage_events").select("*",{count:"exact",head:true}).eq("event_type","error"),
-      supabase.from("ai_usage_events").select("latency_ms").eq("event_type","response").not("latency_ms","is",null).limit(500),
-      supabase.from("ai_usage_events").select("*",{count:"exact",head:true}).eq("event_type","request").gte("created_at",since)
+      db.from("profiles").select("*",{count:"exact",head:true}),
+      db.from("messages").select("*",{count:"exact",head:true}),
+      db.from("ai_usage_events").select("*",{count:"exact",head:true}).eq("event_type","error"),
+      db.from("ai_usage_events").select("latency_ms").eq("event_type","response").not("latency_ms","is",null).limit(500),
+      db.from("ai_usage_events").select("*",{count:"exact",head:true}).eq("event_type","request").gte("created_at",since)
     ]);
     const values=(latency||[]).map(x=>x.latency_ms||0).filter(Boolean);
     setStats({users:users||0,messages:messages||0,errors:errors||0,avgLatency:values.length?Math.round(values.reduce((a,b)=>a+b,0)/values.length):0,today:today||0});
