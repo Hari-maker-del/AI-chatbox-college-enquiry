@@ -77,6 +77,23 @@ async function getUser(req: Request) {
 async function retrieveKnowledge(query: string) {
   const safe = query.replace(/[%_]/g, " ").slice(0, 160);
 
+  let semantic: any[] = [];
+  try {
+    const model = new Supabase.ai.Session("gte-small");
+    const embedding = await model.run(query.slice(0, 2000), {
+      mean_pool: true,
+      normalize: true,
+    });
+    const { data } = await admin.rpc("match_knowledge_chunks", {
+      query_embedding: embedding,
+      match_threshold: 0.68,
+      match_count: 10,
+    });
+    semantic = data || [];
+  } catch (error) {
+    console.warn("Semantic retrieval unavailable; using keyword retrieval.", error);
+  }
+
   const [knowledge, chunks, faqs, courses, fees] = await Promise.all([
     admin
       .from("knowledge_base")
@@ -111,17 +128,30 @@ async function retrieveKnowledge(query: string) {
       .limit(8),
   ]);
 
-  return [
-    ...(knowledge.data || []).map((x: any) => ({
+  const semanticSources = semantic.map((x: any) => ({
+    source: x.source_title,
+    content: x.content,
+    url: x.source_url,
+    page: x.page_number,
+    similarity: x.similarity,
+  }));
+
+  const keywordChunkSources = (chunks.data || []).map((x: any) => ({
+    source: x.source_title,
+    content: x.content,
+    url: x.source_url,
+    page: x.page_number || null,
+  }));
+
+  const merged = [
+    ...semanticSources,
+    ...knowledge.data.map((x: any) => ({
       source: x.title,
       content: x.content,
       url: x.source_url,
+      page: null,
     })),
-    ...(chunks.data || []).map((x: any) => ({
-      source: x.source_title,
-      content: x.content,
-      url: x.source_url,
-    })),
+    ...keywordChunkSources,
     ...(faqs.data || []).map((x: any) => ({
       source: "FAQ",
       content: x.question + "\n" + x.answer,
@@ -132,12 +162,33 @@ async function retrieveKnowledge(query: string) {
       content: JSON.stringify(x),
       url: null,
     })),
+    ...(faqs.data || []).map((x: any) => ({
+      source: "FAQ",
+      content: x.question + "\n" + x.answer,
+      url: null,
+      page: null,
+    })),
+    ...(courses.data || []).map((x: any) => ({
+      source: "Course",
+      content: JSON.stringify(x),
+      url: null,
+      page: null,
+    })),
     ...(fees.data || []).map((x: any) => ({
       source: "Fee structure",
       content: JSON.stringify(x),
       url: null,
+      page: null,
     })),
-  ].slice(0, 20);
+  ];
+
+  const seen = new Set<string>();
+  return merged.filter((x: any) => {
+    const key = [x.source, x.page || "", x.content.slice(0, 100)].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 24);
 }
 
 function languageHint(messages: { role: string; content: string }[]) {
@@ -221,6 +272,7 @@ Deno.serve(async (req: Request) => {
             (x: any) =>
               "[SOURCE: " +
               x.source +
+              (x.page ? " | page " + x.page : "") +
               "]\n" +
               x.content +
               (x.url ? "\nSource: " + x.url : ""),
@@ -388,7 +440,11 @@ Deno.serve(async (req: Request) => {
     const sourceHeader = encodeURIComponent(
       JSON.stringify(
         knowledge
-          .map((x: any) => ({ title: x.source, url: x.url || null }))
+          .map((x: any) => ({
+            title: x.source,
+            url: x.url || null,
+            page: x.page || null,
+          }))
           .filter(
             (x: any, i: number, a: any[]) =>
               a.findIndex(
