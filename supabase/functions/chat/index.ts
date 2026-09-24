@@ -90,7 +90,8 @@ async function retrieveKnowledge(query: string) {
       .limit(12),
     admin
       .from("knowledge_chunks")
-      .select("content,source_title,source_url,language")
+      .select("content,source_title,source_url,language,knowledge_documents!inner(status)")
+      .eq("knowledge_documents.status", "published")
       .textSearch("content", query, { type: "websearch", config: "simple" })
       .limit(10),
     admin
