@@ -23,6 +23,7 @@ const ChatBubble=({message}:{message:ChatMessage})=>{
     <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${isUser?"chat-bubble-user rounded-br-sm":"chat-bubble-ai rounded-bl-sm"}`}>
       {isUser?<p className="text-sm whitespace-pre-wrap">{message.content}</p>:<div className="text-sm prose prose-sm max-w-none prose-headings:text-chat-ai-foreground prose-p:text-chat-ai-foreground prose-li:text-chat-ai-foreground prose-strong:text-chat-ai-foreground"><ReactMarkdown>{message.content}</ReactMarkdown></div>}
       {!isUser&&message.sources?.length ? <div className="mt-2 border-t border-border/60 pt-2"><p className="text-[11px] font-medium text-muted-foreground mb-1">Verified sources</p><div className="flex flex-wrap gap-2">{message.sources.map((source,index)=>source.url?<a key={`${source.title}-${index}`} href={source.url} target="_blank" rel="noreferrer" className="text-[11px] text-primary underline underline-offset-2">{source.title}</a>:<span key={`${source.title}-${index}`} className="text-[11px] text-muted-foreground">{source.title}</span>)}</div></div>:null}
+      </div>{!isUser && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(message.id) ? <MessageFeedback messageId={message.id} /> : null}
     </div>
   </motion.div>;
 };
