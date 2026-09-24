@@ -107,7 +107,7 @@ async function retrieveKnowledge(query: string) {
       .limit(12),
     admin
       .from("knowledge_chunks")
-      .select("content,source_title,source_url,language,knowledge_documents!inner(status)")
+      .select("content,source_title,source_url,language,page_number,knowledge_documents!inner(status)")
       .eq("knowledge_documents.status", "published")
       .textSearch("content", query, { type: "websearch", config: "simple" })
       .limit(10),
@@ -152,16 +152,6 @@ async function retrieveKnowledge(query: string) {
       page: null,
     })),
     ...keywordChunkSources,
-    ...(faqs.data || []).map((x: any) => ({
-      source: "FAQ",
-      content: x.question + "\n" + x.answer,
-      url: null,
-    })),
-    ...(courses.data || []).map((x: any) => ({
-      source: "Course",
-      content: JSON.stringify(x),
-      url: null,
-    })),
     ...(faqs.data || []).map((x: any) => ({
       source: "FAQ",
       content: x.question + "\n" + x.answer,
