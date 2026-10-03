@@ -1,20 +1,13 @@
-import { useState } from "react";
-import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import ChatInterface from "@/components/ChatInterface";
-
 const Index = () => {
-  const [showChat, setShowChat] = useState(false);
-
-  if (showChat) {
-    return <ChatInterface onBack={() => setShowChat(false)} />;
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <HeroSection onStartChat={() => setShowChat(true)} />
-    </div>
+    <main className="h-screen w-full overflow-hidden bg-white">
+      <iframe
+        title="CampusOS — Your Digital Campus"
+        src="/campusos/index.html"
+        className="h-full w-full border-0"
+        allow="microphone; camera"
+      />
+    </main>
   );
 };
 
