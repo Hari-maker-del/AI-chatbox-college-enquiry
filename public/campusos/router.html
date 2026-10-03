@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CampusOS</title>
+<style>html,body,#app{margin:0;width:100%;height:100%;overflow:hidden;background:#f2fbff}iframe{width:100%;height:100%;border:0;display:block}</style>
+</head>
+<body>
+<div id="app"><iframe id="campusFrame" title="CampusOS — Your Digital Campus" allow="microphone; camera"></iframe></div>
+<script>
+const pages={dashboard:'editorial_student_dashboard/code.html',services:'editorial_student_services/code.html',applications:'editorial_application_tracker/code.html',bonafide:'service_request_bonafide_certificate/code.html',campus:'editorial_campus_map_wayfinding/code.html'};
+const aliases={dashboard:'dashboard',services:'services','my services':'services','student services':'services',applications:'applications','my applications':'applications',bonafide:'bonafide','bonafide certificate':'bonafide','certificate request':'bonafide',campus:'campus','campus map':'campus',map:'campus'};
+const normalize=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+function route(value){const key=aliases[normalize(value)]||'dashboard';if(location.hash!=='#/'+key)history.pushState({key},'', '#/'+key);document.getElementById('campusFrame').src=pages[key];}
+window.addEventListener('popstate',()=>route(location.hash.slice(2)||'dashboard'));
+window.addEventListener('hashchange',()=>{const key=normalize(location.hash.slice(2));document.getElementById('campusFrame').src=pages[aliases[key]||'dashboard'];});
+window.addEventListener('message',event=>{if(event.data&&event.data.type==='campusos:navigate')route(event.data.route)});
+route(location.hash.slice(2)||'dashboard');
+</script>
+</body>
+</html>
