@@ -239,3 +239,39 @@ export async function updateStudentProfile(
   if (error) throw error;
   return data as StudentProfile;
 }
+
+
+export type CampusService = {
+  id: string;
+  name: string;
+  service_type: string;
+  description: string | null;
+  department: string | null;
+  keywords: string[];
+  requirements: string[];
+  active: boolean;
+};
+
+export async function listCampusServices(includeInactive = false) {
+  let query = db
+    .from("campus_service_catalog")
+    .select("id,name,service_type,description,department,keywords,requirements,active")
+    .order("name", { ascending: true });
+  if (!includeInactive) query = query.eq("active", true);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as CampusService[];
+}
+
+export async function getCampusServiceByIntent(input: string) {
+  const services = await listCampusServices();
+  const text = input.toLowerCase();
+  const scored = services.map((service) => {
+    const terms = [service.name, service.service_type, ...(service.keywords ?? [])]
+      .map((value) => value.toLowerCase())
+      .filter(Boolean);
+    const score = terms.reduce((total, term) => total + (text.includes(term) ? Math.max(1, term.split(/\\s+/).length) : 0), 0);
+    return { service, score };
+  }).sort((a, b) => b.score - a.score);
+  return scored[0]?.score ? scored[0].service : null;
+}
