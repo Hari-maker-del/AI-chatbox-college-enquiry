@@ -1,4 +1,14 @@
-import { createServiceRequest, createAppointment, createSupportTicket, createPaymentIntent, getApplicationStatus, getApplicationTimeline, findEligibleCourses } from "@/lib/campusos";
+import {
+  createServiceRequest,
+  createAppointment,
+  createSupportTicket,
+  createPaymentIntent,
+  getApplicationStatus,
+  getApplicationTimeline,
+  findEligibleCourses,
+  getStudentProfile,
+  type StudentProfile,
+} from "@/lib/campusos";
 
 export type CampusIntent =
   | "bonafide"
@@ -17,6 +27,9 @@ export type CampusIntentResult = {
   purpose?: string;
   department?: string;
   location?: string;
+  percentage?: number;
+  stream?: string;
+  courseQuery?: string;
 };
 
 export type CampusAILanguage = "en" | "ta";
@@ -36,7 +49,11 @@ export function detectCampusLanguage(input: string): CampusAILanguage {
 }
 
 export function understandCampusIntent(input: string): CampusIntentResult {
-  const text = normalize(input);\n  const percentageMatch = text.match(/(?:percentage|percent|mark|score|cutoff)\\s*(?:is|of|:)?\\s*(\\d+(?:\\.\\d+)?)/i) ?? text.match(/(\\d+(?:\\.\\d+)?)\\s*(?:percent|%)/i);\n  const percentage = percentageMatch ? Number(percentageMatch[1]) : undefined;
+  const text = normalize(input);
+  const percentageMatch =
+    text.match(/(?:percentage|percent|mark|score|cutoff)\s*(?:is|of|:)?\s*(\d+(?:\.\d+)?)/i) ??
+    text.match(/(\d+(?:\.\d+)?)\s*(?:percent|%)/i);
+  const percentage = percentageMatch ? Number(percentageMatch[1]) : undefined;
 
   if (has(text, "bonafide", "bona fide", "bonafide certificate", "போனஃபைட்", "போனபைட்")) {
     const purpose = has(text, "scholarship", "scholarship ku", "scholarship kku", "ஸ்காலர்ஷிப்")
@@ -59,7 +76,23 @@ export function understandCampusIntent(input: string): CampusIntentResult {
   }
 
   if (has(text, "eligible", "eligibility", "eligible ah", "eligibility check", "தகுதி")) {
-    const stream = has(text, "computer science", "cse") ? "Computer Science" : has(text, "information technology", "it") ? "Information Technology" : has(text, "commerce") ? "Commerce" : has(text, "science") ? "Science" : undefined;\n    const courseQuery = has(text, "bca") ? "BCA" : has(text, "bsc") ? "B.Sc" : has(text, "btech", "b.tech") ? "B.Tech" : undefined;\n    return { intent: "eligibility", confidence: 0.92, title: "Course Eligibility Check", percentage, stream, courseQuery };
+    const stream = has(text, "computer science", "cse")
+      ? "Computer Science"
+      : has(text, "information technology", "it")
+        ? "Information Technology"
+        : has(text, "commerce")
+          ? "Commerce"
+          : has(text, "science")
+            ? "Science"
+            : undefined;
+    const courseQuery = has(text, "bca")
+      ? "BCA"
+      : has(text, "bsc")
+        ? "B.Sc"
+        : has(text, "btech", "b.tech")
+          ? "B.Tech"
+          : undefined;
+    return { intent: "eligibility", confidence: 0.92, title: "Course Eligibility Check", percentage, stream, courseQuery };
   }
 
   if (has(text, "fee", "fees", "pay fee", "exam fee", "fees pay", "கட்டணம்")) {
@@ -75,21 +108,36 @@ export function understandCampusIntent(input: string): CampusIntentResult {
   }
 
   if (has(text, "where is", "location", "map", "எங்கே", "campus", "exam cell", "library", "hostel")) {
-    const location = has(text, "exam cell") ? "Exam Cell" : has(text, "library") ? "Library" : has(text, "hostel") ? "Hostel" : undefined;
+    const location = has(text, "exam cell")
+      ? "Exam Cell"
+      : has(text, "library")
+        ? "Library"
+        : has(text, "hostel")
+          ? "Hostel"
+          : undefined;
     return { intent: "campus_location", confidence: 0.86, title: "Campus Location", location };
   }
 
   return { intent: "unknown", confidence: 0, title: "CampusOS Assistant" };
 }
 
-const englishMessage = (result: CampusIntentResult, input: string, data?: any) => {
+const profileName = (profile?: StudentProfile | null) =>
+  profile?.full_name?.trim() ? profile.full_name.trim().split(/\s+/)[0] : "";
+
+const englishMessage = (result: CampusIntentResult, input: string, data?: any, profile?: StudentProfile | null) => {
+  const name = profileName(profile);
   switch (result.intent) {
     case "bonafide":
-      return `Bonafide Certificate request created${result.purpose ? ` for ${result.purpose}` : ""}. Request ${data?.request_code} is now under review.`;
+      return `${name ? `Hi ${name}, ` : ""}Bonafide Certificate request created${result.purpose ? ` for ${result.purpose}` : ""}. Request ${data?.request_code} is now under review.`;
     case "appointment":
       return `Appointment request created. ${data?.appointment_code} is booked for ${data?.appointment_date}.`;
     case "eligibility":
-      return "I can start the eligibility workflow. Tell me your percentage and preferred course.";
+      if (data?.eligibility) {
+        const courses = data.eligibility.courses ?? [];
+        if (!courses.length) return `Based on ${data.eligibility.percentage}%, I could not find a matching course in the college catalogue. Ask admissions to verify any course-specific rules.`;
+        return `Based on ${data.eligibility.percentage}%${result.stream ? ` in ${result.stream}` : ""}, I found ${courses.length} matching course${courses.length === 1 ? "" : "s"}: ${courses.slice(0, 5).map((course: any) => course.name).join(", ")}.`;
+      }
+      return `I can check your eligibility. Tell me your percentage${profile?.department ? ` (your profile says ${profile.department})` : ""} and preferred course.`;
     case "fee":
       return data?.payment
         ? `Exam fee payment session created for ₹${data.payment.amount}. Payment status: ${data.payment.payment_status}.`
@@ -107,18 +155,24 @@ const englishMessage = (result: CampusIntentResult, input: string, data?: any) =
     case "campus_location":
       return result.location ? `${result.location} can be found from the Campus Map.` : "I can open the Campus Map and help you find a location.";
     default:
-      return "I can help with certificates, appointments, fees, eligibility, support tickets, application status and campus locations.";
+      return `I can help${profile?.department ? ` with services relevant to ${profile.department}` : ""} — certificates, appointments, fees, eligibility, support tickets, application status and campus locations.`;
   }
 };
 
-const tamilMessage = (result: CampusIntentResult, data?: any) => {
+const tamilMessage = (result: CampusIntentResult, data?: any, profile?: StudentProfile | null) => {
+  const name = profileName(profile);
   switch (result.intent) {
     case "bonafide":
-      return `போனஃபைட் சான்றிதழ் கோரிக்கை உருவாக்கப்பட்டது${result.purpose ? ` — ${result.purpose}க்காக` : ""}. உங்கள் கோரிக்கை ${data?.request_code ?? ""} இப்போது பரிசீலனையில் உள்ளது.`;
+      return `${name ? `வணக்கம் ${name}. ` : ""}போனஃபைட் சான்றிதழ் கோரிக்கை உருவாக்கப்பட்டது${result.purpose ? ` — ${result.purpose}க்காக` : ""}. உங்கள் கோரிக்கை ${data?.request_code ?? ""} இப்போது பரிசீலனையில் உள்ளது.`;
     case "appointment":
       return `Appointment கோரிக்கை உருவாக்கப்பட்டது. ${data?.appointment_code ?? ""} ${data?.appointment_date ?? ""} அன்று பதிவு செய்யப்பட்டுள்ளது.`;
     case "eligibility":
-      return "Eligibility workflow-ஐ தொடங்கலாம். உங்கள் percentage மற்றும் விரும்பும் course-ஐ சொல்லுங்கள்.";
+      if (data?.eligibility) {
+        const courses = data.eligibility.courses ?? [];
+        if (!courses.length) return `${data.eligibility.percentage}% அடிப்படையில் college catalogue-ல் பொருந்தும் course கிடைக்கவில்லை. Admissions team-ல் course rules-ஐ verify செய்யுங்கள்.`;
+        return `${data.eligibility.percentage}% அடிப்படையில் ${courses.length} course கிடைத்துள்ளது: ${courses.slice(0, 5).map((course: any) => course.name).join(", ")}.`;
+      }
+      return "Eligibility check செய்யலாம். உங்கள் percentage மற்றும் விரும்பும் course-ஐ சொல்லுங்கள்.";
     case "fee":
       return data?.payment
         ? `₹${data.payment.amount} exam fee payment session உருவாக்கப்பட்டுள்ளது. Payment status: ${data.payment.payment_status}.`
@@ -140,13 +194,50 @@ const tamilMessage = (result: CampusIntentResult, data?: any) => {
   }
 };
 
+const profileStream = (department?: string | null) => {
+  const value = (department ?? "").toLowerCase();
+  if (value.includes("computer") || value.includes("cse")) return "Computer Science";
+  if (value.includes("information technology") || /\bit\b/.test(value)) return "Information Technology";
+  if (value.includes("commerce")) return "Commerce";
+  if (value.includes("science")) return "Science";
+  return undefined;
+};
+
 export async function executeCampusIntent(
   input: string,
   userId: string,
-  context?: { appointmentDate?: string; appointmentTime?: string; language?: CampusAILanguage }
+  context?: { appointmentDate?: string; appointmentTime?: string; language?: CampusAILanguage; profile?: StudentProfile | null }
 ) {
   const result = understandCampusIntent(input);
   const language = context?.language ?? detectCampusLanguage(input);
+  const profile = context?.profile ?? await getStudentProfile(userId);
+
+  if (result.intent === "eligibility") {
+    const stream = result.stream ?? profileStream(profile?.department);
+    if (result.percentage === undefined || Number.isNaN(result.percentage)) {
+      return {
+        ...result,
+        stream,
+        language,
+        profile,
+        message: language === "ta" ? tamilMessage({ ...result, stream }) : englishMessage({ ...result, stream }, input, undefined, profile),
+      };
+    }
+    const eligibility = await findEligibleCourses({
+      percentage: Math.max(0, Math.min(100, result.percentage)),
+      stream,
+      courseQuery: result.courseQuery,
+    });
+    const data = { eligibility };
+    return {
+      ...result,
+      stream,
+      language,
+      profile,
+      data,
+      message: language === "ta" ? tamilMessage({ ...result, stream }, data, profile) : englishMessage({ ...result, stream }, input, data, profile),
+    };
+  }
 
   if (result.intent === "bonafide") {
     const request = await createServiceRequest({
@@ -154,32 +245,32 @@ export async function executeCampusIntent(
       serviceType: "bonafide",
       title: result.title,
       purpose: result.purpose ?? "General purpose",
-      details: { aiSource: true, originalText: input, detectedLanguage: language },
+      details: { aiSource: true, originalText: input, detectedLanguage: language, studentDepartment: profile?.department ?? null },
     });
-    return { ...result, language, message: language === "ta" ? tamilMessage(result, request) : englishMessage(result, input, request) };
+    return { ...result, language, profile, message: language === "ta" ? tamilMessage(result, request, profile) : englishMessage(result, input, request, profile) };
   }
 
   if (result.intent === "application_status") {
     const data = await getApplicationStatus(userId, input);
     if (data.selected) data.timeline = await getApplicationTimeline(userId, data.selected.id);
-    return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };
+    return { ...result, language, profile, data, message: language === "ta" ? tamilMessage(result, data, profile) : englishMessage(result, input, data, profile) };
   }
 
-  if (result.intent === "eligibility") {\n    if (result.percentage === undefined || Number.isNaN(result.percentage)) {\n      return { ...result, language, message: language === "ta" ? tamilMessage(result) : englishMessage(result, input) };\n    }\n    const eligibility = await findEligibleCourses({\n      percentage: Math.max(0, Math.min(100, result.percentage)),\n      stream: result.stream,\n      courseQuery: result.courseQuery,\n    });\n    const data = { eligibility };\n    return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };\n  }\n\n  if (result.intent === "support") {
+  if (result.intent === "support") {
     const ticket = await createSupportTicket({
       userId,
       category: "student-support",
-      subject: "CampusOS student support request",
+      subject: `${profile?.department ?? "Student"} support request`,
       description: input,
     });
     const data = { ticket };
-    return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };
+    return { ...result, language, profile, data, message: language === "ta" ? tamilMessage(result, data, profile) : englishMessage(result, input, data, profile) };
   }
 
   if (result.intent === "fee") {
     const payment = await createPaymentIntent({ userId, amount: 0 });
     const data = { payment };
-    return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };
+    return { ...result, language, profile, data, message: language === "ta" ? tamilMessage(result, data, profile) : englishMessage(result, input, data, profile) };
   }
 
   if (result.intent === "appointment") {
@@ -187,17 +278,13 @@ export async function executeCampusIntent(
     const time = context?.appointmentTime ?? "10:00:00";
     const appointment = await createAppointment({
       userId,
-      department: result.department ?? "Student Services",
+      department: result.department ?? profile?.department ?? "Student Services",
       appointmentDate: date,
       appointmentTime: time,
       purpose: input,
     });
-    return { ...result, language, message: language === "ta" ? tamilMessage(result, appointment) : englishMessage(result, input, appointment) };
+    return { ...result, language, profile, message: language === "ta" ? tamilMessage(result, appointment, profile) : englishMessage(result, input, appointment, profile) };
   }
 
-  return {
-    ...result,
-    language,
-    message: language === "ta" ? tamilMessage(result) : englishMessage(result, input),
-  };
+  return { ...result, language, profile, message: language === "ta" ? tamilMessage(result, undefined, profile) : englishMessage(result, input, undefined, profile) };
 }
