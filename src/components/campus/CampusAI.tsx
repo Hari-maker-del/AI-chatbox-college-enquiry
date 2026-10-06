@@ -164,7 +164,7 @@ const CampusAI = () => {
         });
         setReply(result.message);
         speak(result.message, result.language);
-        if (result.intent === "eligibility" && result.data?.eligibility === undefined) {
+        if (result.intent === "eligibility" && (result as any).data?.eligibility === undefined) {
           setPendingIntent("eligibility");
         } else {
           setPendingIntent(null);
