@@ -7,6 +7,7 @@ import {
   getApplicationTimeline,
   findEligibleCourses,
   getStudentProfile,
+  getCampusServiceByIntent,
   type StudentProfile,
 } from "@/lib/campusos";
 
@@ -211,6 +212,31 @@ export async function executeCampusIntent(
   const result = understandCampusIntent(input);
   const language = context?.language ?? detectCampusLanguage(input);
   const profile = context?.profile ?? await getStudentProfile(userId);
+
+  if (result.intent === "unknown") {
+    const service = await getCampusServiceByIntent(input);
+    if (service) {
+      const request = await createServiceRequest({
+        userId,
+        serviceType: service.service_type,
+        title: service.name,
+        purpose: service.description ?? "Student service request",
+        details: {
+          aiSource: true,
+          originalText: input,
+          detectedLanguage: language,
+          serviceId: service.id,
+          department: service.department,
+          requirements: service.requirements,
+          studentDepartment: profile?.department ?? null,
+        },
+      });
+      const message = language === "ta"
+        ? `${service.name} service-க்கான request உருவாக்கப்பட்டது. Request ${request.request_code} இப்போது process செய்யப்படுகிறது.`
+        : `${service.name} request created. Request ${request.request_code} is now with ${service.department || "the responsible campus team"}.`;
+      return { ...result, intent: "dynamic_service" as const, title: service.name, language, profile, data: { service, request }, message };
+    }
+  }
 
   if (result.intent === "eligibility") {
     const stream = result.stream ?? profileStream(profile?.department);
