@@ -1,6 +1,15 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { detectCampusLanguage, executeCampusIntent, understandCampusIntent } from "@/lib/campusos-ai";
+import {
+  detectCampusLanguage,
+  executeCampusIntent,
+  understandCampusIntent,
+} from "@/lib/campusos-ai";
+import {
+  getStudentProfile,
+  updateStudentProfile,
+  type StudentProfile,
+} from "@/lib/campusos";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -19,6 +28,19 @@ type SpeechWindow = Window & {
 };
 
 type VoiceLanguage = "en-IN" | "ta-IN";
+type PendingIntent = "eligibility" | null;
+
+const emptyProfile: StudentProfile = {
+  user_id: "",
+  full_name: "",
+  email: "",
+  phone: "",
+  roll_number: "",
+  department: "",
+  year_level: null,
+  section: "",
+  interests: "",
+};
 
 const CampusAI = () => {
   const { user } = useAuth();
@@ -29,7 +51,13 @@ const CampusAI = () => {
   const [intent, setIntent] = useState("Ready");
   const [language, setLanguage] = useState<VoiceLanguage>("en-IN");
   const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);\n  const [detectedLanguage, setDetectedLanguage] = useState<"en" | "ta">("en");
+  const [speaking, setSpeaking] = useState(false);
+  const [detectedLanguage, setDetectedLanguage] = useState<"en" | "ta">("en");
+  const [pendingIntent, setPendingIntent] = useState<PendingIntent>(null);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<StudentProfile>(emptyProfile);
+  const [profileSaving, setProfileSaving] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => () => {
@@ -37,7 +65,22 @@ const CampusAI = () => {
     window.speechSynthesis?.cancel();
   }, []);
 
-  const selectedLanguage = detectedLanguage === "ta" ? "ta" : "en";\n\n  const localized = (en: string, ta: string) => (selectedLanguage === "ta" ? ta : en);
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setProfileDraft(emptyProfile);
+      return;
+    }
+    getStudentProfile(user.id)
+      .then((data) => {
+        setProfile(data);
+        if (data) setProfileDraft(data);
+      })
+      .catch(() => undefined);
+  }, [user]);
+
+  const selectedLanguage = detectedLanguage === "ta" ? "ta" : "en";
+  const localized = (en: string, ta: string) => (selectedLanguage === "ta" ? ta : en);
 
   const speak = (message: string, responseLanguage: "en" | "ta" = selectedLanguage) => {
     if (!("speechSynthesis" in window)) return;
@@ -78,7 +121,8 @@ const CampusAI = () => {
     recognition.onresult = (event) => {
       let transcript = "";
       for (let i = 0; i < event.results.length; i += 1) transcript += event.results[i][0].transcript;
-      setInput(transcript);\n      setDetectedLanguage(detectCampusLanguage(transcript));
+      setInput(transcript);
+      setDetectedLanguage(detectCampusLanguage(transcript));
     };
     recognition.onerror = () => {
       setListening(false);
@@ -101,7 +145,8 @@ const CampusAI = () => {
     if (!input.trim()) return;
 
     const value = input.trim();
-    const understood = understandCampusIntent(value);
+    const workflowInput = pendingIntent ? `${pendingIntent} ${value}` : value;
+    const understood = understandCampusIntent(workflowInput);
     setIntent(understood.intent.replaceAll("_", " ").toUpperCase());
     setBusy(true);
 
@@ -113,9 +158,17 @@ const CampusAI = () => {
         setReply(message);
         speak(message);
       } else {
-        const result = await executeCampusIntent(value, user.id);
+        const result = await executeCampusIntent(workflowInput, user.id, {
+          language: selectedLanguage,
+          profile,
+        });
         setReply(result.message);
-        speak(result.message);
+        speak(result.message, result.language);
+        if (result.intent === "eligibility" && result.data?.eligibility === undefined) {
+          setPendingIntent("eligibility");
+        } else {
+          setPendingIntent(null);
+        }
       }
     } catch (error) {
       const message = error instanceof Error
@@ -131,10 +184,41 @@ const CampusAI = () => {
     }
   };
 
+  const saveProfile = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user) return;
+    setProfileSaving(true);
+    try {
+      const saved = await updateStudentProfile(user.id, {
+        full_name: profileDraft.full_name,
+        phone: profileDraft.phone,
+        roll_number: profileDraft.roll_number,
+        department: profileDraft.department,
+        year_level: profileDraft.year_level,
+        section: profileDraft.section,
+        interests: profileDraft.interests,
+      });
+      setProfile(saved);
+      setProfileDraft(saved);
+      setProfileOpen(false);
+      const message = selectedLanguage === "ta"
+        ? "உங்கள் student profile சேமிக்கப்பட்டது. இனி CampusOS உங்கள் department மற்றும் year-ஐ பயன்படுத்தி பதில்களை personalize செய்யும்."
+        : "Your student profile is saved. CampusOS will now personalize services using your department and year.";
+      setReply(message);
+      speak(message);
+    } catch (error) {
+      setReply(error instanceof Error ? error.message : "Could not save your profile.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   const stopSpeaking = () => {
     window.speechSynthesis?.cancel();
     setSpeaking(false);
   };
+
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0];
 
   return (
     <>
@@ -155,8 +239,9 @@ const CampusAI = () => {
             <header className="bg-[#17252A] px-6 py-5 text-white">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-mono text-[10px] tracking-[0.24em] text-[#9BD5D2]">CAMPUSOS / VOICE INTENT ENGINE</div>
+                  <div className="font-mono text-[10px] tracking-[0.24em] text-[#9BD5D2]">CAMPUSOS / PERSONAL AI</div>
                   <h2 className="mt-2 text-2xl font-black uppercase">JUST SAY WHAT YOU NEED.</h2>
+                  {firstName && <div className="mt-1 text-sm text-[#9BD5D2]">Welcome back, {firstName}.</div>}
                 </div>
                 <button onClick={() => { stopSpeaking(); setOpen(false); }} className="text-2xl text-white/70 hover:text-white" aria-label="Close">×</button>
               </div>
@@ -167,6 +252,16 @@ const CampusAI = () => {
             </header>
 
             <div className="space-y-4 p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#4E6265]">Your campus profile</div>
+                  <div className="mt-1 text-xs text-[#17252A]">
+                    {profile?.department || "Department not set"}{profile?.year_level ? ` · Year ${profile.year_level}` : ""}
+                  </div>
+                </div>
+                <button type="button" onClick={() => setProfileOpen(true)} className="border border-[#2B7A78] px-3 py-2 font-mono text-[10px] font-bold uppercase text-[#2B7A78]">Edit profile</button>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#4E6265]">Voice language</span>
                 <button type="button" onClick={() => setLanguage("en-IN")} className={`border px-3 py-1.5 font-mono text-[10px] uppercase ${language === "en-IN" ? "border-[#2B7A78] bg-[#2B7A78] text-white" : "border-[#17252A]/15 bg-white"}`}>English</button>
@@ -185,7 +280,7 @@ const CampusAI = () => {
               <div className="grid gap-2 text-xs font-mono uppercase">
                 <button onClick={() => { setPendingIntent(null); setInput("Enakku bonafide certificate venum scholarship-ku"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“Enakku bonafide certificate venum scholarship-ku.”</button>
                 <button onClick={() => { setPendingIntent(null); setInput("I need to book an appointment with placement"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“I need to book an appointment with placement.”</button>
-                <button onClick={() => { setPendingIntent(null); setInput("Where is the exam cell?"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“Where is the exam cell?”</button>
+                <button onClick={() => { setPendingIntent("eligibility"); setInput("I want to check my eligibility"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“I want to check my eligibility.”</button>
               </div>
 
               <form onSubmit={submit} className="flex gap-2">
@@ -209,10 +304,43 @@ const CampusAI = () => {
               </form>
 
               <p className="text-[11px] leading-5 text-[#4E6265]">
-                Speak in English or Tamil. Tanglish such as “enakku bonafide venum” is handled by the intent engine after speech is transcribed. CampusOS speaks back in the selected language when your browser provides a compatible voice.
+                CampusOS uses your saved academic profile to personalize eligibility checks, appointment routing and service context. Speak in English or Tamil; Tanglish is supported by the intent engine.
               </p>
             </div>
           </section>
+        </div>
+      )}
+
+      {profileOpen && (
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-[#0B192C]/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg border border-[#17252A]/15 bg-[#F7FCFC] shadow-2xl">
+            <div className="flex items-start justify-between bg-[#DEF2F1] px-6 py-5">
+              <div>
+                <div className="font-mono text-[10px] tracking-[0.2em] text-[#2B7A78]">CAMPUSOS / PROFILE</div>
+                <h3 className="mt-2 text-xl font-black uppercase text-[#17252A]">STUDENT CONTEXT</h3>
+              </div>
+              <button type="button" onClick={() => setProfileOpen(false)} className="text-2xl text-[#17252A]" aria-label="Close">×</button>
+            </div>
+            <form onSubmit={saveProfile} className="space-y-4 p-6">
+              <input value={profileDraft.full_name ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, full_name: e.target.value })} placeholder="Full name" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+              <div className="grid grid-cols-2 gap-3">
+                <input value={profileDraft.roll_number ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, roll_number: e.target.value })} placeholder="Roll number" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+                <input value={profileDraft.phone ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, phone: e.target.value })} placeholder="Phone" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input value={profileDraft.department ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, department: e.target.value })} placeholder="Department (e.g. IT)" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+                <input type="number" min="1" max="8" value={profileDraft.year_level ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, year_level: e.target.value ? Number(e.target.value) : null })} placeholder="Year" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input value={profileDraft.section ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, section: e.target.value })} placeholder="Section" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+                <input value={profileDraft.interests ?? ""} onChange={(e) => setProfileDraft({ ...profileDraft, interests: e.target.value })} placeholder="Interests (AI, placements...)" className="w-full border border-[#17252A]/20 bg-white px-4 py-3 text-sm" />
+              </div>
+              <div className="flex justify-end gap-3 border-t border-[#17252A]/10 pt-4">
+                <button type="button" onClick={() => setProfileOpen(false)} className="border border-[#17252A]/20 px-5 py-3 font-mono text-xs font-bold uppercase">Cancel</button>
+                <button disabled={profileSaving} className="bg-[#FF6500] px-6 py-3 font-mono text-xs font-bold uppercase text-white disabled:opacity-50">{profileSaving ? "Saving..." : "Save profile"}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </>
