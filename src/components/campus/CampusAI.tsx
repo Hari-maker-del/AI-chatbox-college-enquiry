@@ -183,9 +183,9 @@ const CampusAI = () => {
               </div>
 
               <div className="grid gap-2 text-xs font-mono uppercase">
-                <button onClick={() => setInput("Enakku bonafide certificate venum scholarship-ku")} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“Enakku bonafide certificate venum scholarship-ku.”</button>
-                <button onClick={() => setInput("I need to book an appointment with placement")} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“I need to book an appointment with placement.”</button>
-                <button onClick={() => setInput("Where is the exam cell?")} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“Where is the exam cell?”</button>
+                <button onClick={() => { setPendingIntent(null); setInput("Enakku bonafide certificate venum scholarship-ku"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“Enakku bonafide certificate venum scholarship-ku.”</button>
+                <button onClick={() => { setPendingIntent(null); setInput("I need to book an appointment with placement"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“I need to book an appointment with placement.”</button>
+                <button onClick={() => { setPendingIntent(null); setInput("Where is the exam cell?"); }} className="border border-[#17252A]/10 bg-white p-3 text-left hover:border-[#2B7A78]">“Where is the exam cell?”</button>
               </div>
 
               <form onSubmit={submit} className="flex gap-2">
