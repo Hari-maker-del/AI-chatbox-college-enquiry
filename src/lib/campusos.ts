@@ -11,6 +11,7 @@ export type CampusRequest = {
   delivery_method: string | null;
   status: string;
   submitted_at: string;
+  updated_at?: string | null;
 };
 
 export async function createServiceRequest(input: {
@@ -31,7 +32,7 @@ export async function createServiceRequest(input: {
       delivery_method: input.deliveryMethod ?? null,
       details: input.details ?? {},
     })
-    .select("id, request_code, service_type, title, purpose, delivery_method, status, submitted_at")
+    .select("id, request_code, service_type, title, purpose, delivery_method, status, submitted_at, updated_at")
     .single();
 
   if (error) throw error;
@@ -49,12 +50,49 @@ export async function createServiceRequest(input: {
 export async function listServiceRequests(userId: string) {
   const { data, error } = await db
     .from("campus_service_requests")
-    .select("id, request_code, service_type, title, purpose, delivery_method, status, submitted_at")
+    .select("id, request_code, service_type, title, purpose, delivery_method, status, submitted_at, updated_at")
     .eq("user_id", userId)
     .order("submitted_at", { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as CampusRequest[];
+}
+
+export async function getApplicationStatus(userId: string, requestedText?: string) {
+  let query = db
+    .from("campus_service_requests")
+    .select("id, request_code, service_type, title, purpose, delivery_method, status, submitted_at, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(5);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const requests = (data ?? []) as CampusRequest[];
+  if (!requests.length) return { requests: [], selected: null };
+
+  const text = (requestedText ?? "").toLowerCase();
+  const selected =
+    requests.find((item) =>
+      text.includes(item.request_code.toLowerCase()) ||
+      text.includes(item.title.toLowerCase()) ||
+      text.includes(item.service_type.toLowerCase())
+    ) ?? requests[0];
+
+  return { requests, selected };
+}
+
+export async function getApplicationTimeline(userId: string, requestId: string) {
+  const { data, error } = await db
+    .from("campus_request_events")
+    .select("id, request_id, status, note, created_at")
+    .eq("user_id", userId)
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function createAppointment(input: {
