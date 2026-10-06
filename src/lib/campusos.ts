@@ -192,3 +192,50 @@ export async function createPaymentIntent(input: {
   if (error) throw error;
   return data;
 }
+
+
+export type StudentProfile = {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  roll_number: string | null;
+  department: string | null;
+  year_level: number | null;
+  section: string | null;
+  interests: string | null;
+};
+
+export async function getStudentProfile(userId: string) {
+  const { data, error } = await db
+    .from("profiles")
+    .select("user_id, full_name, email, phone, roll_number, department, year_level, section, interests")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as StudentProfile | null;
+}
+
+export async function updateStudentProfile(
+  userId: string,
+  input: Partial<Omit<StudentProfile, "user_id" | "email">>
+) {
+  const { data, error } = await db
+    .from("profiles")
+    .update({
+      full_name: input.full_name ?? undefined,
+      phone: input.phone ?? null,
+      roll_number: input.roll_number ?? null,
+      department: input.department ?? null,
+      year_level: input.year_level ?? null,
+      section: input.section ?? null,
+      interests: input.interests ?? null,
+    })
+    .eq("user_id", userId)
+    .select("user_id, full_name, email, phone, roll_number, department, year_level, section, interests")
+    .single();
+
+  if (error) throw error;
+  return data as StudentProfile;
+}
