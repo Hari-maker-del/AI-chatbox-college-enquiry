@@ -1,4 +1,4 @@
-import { createServiceRequest, createAppointment } from "@/lib/campusos";
+import { createServiceRequest, createAppointment, getApplicationStatus, getApplicationTimeline } from "@/lib/campusos";
 
 export type CampusIntent =
   | "bonafide"
@@ -155,7 +155,7 @@ export async function executeCampusIntent(
     return { ...result, language, message: language === "ta" ? tamilMessage(result, request) : englishMessage(result, input, request) };
   }
 
-  if (result.intent === "appointment") {
+  if (result.intent === "application_status") {\n    const data = await getApplicationStatus(userId, input);\n    if (data.selected) data.timeline = await getApplicationTimeline(userId, data.selected.id);\n    return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };\n  }\n\n  if (result.intent === "appointment") {
     const date = context?.appointmentDate ?? new Date(Date.now() + 86400000).toISOString().slice(0, 10);
     const time = context?.appointmentTime ?? "10:00:00";
     const appointment = await createAppointment({
