@@ -22,7 +22,7 @@ const AdminCampusOps = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);\n  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,6 +40,37 @@ const AdminCampusOps = () => {
   }, [toast]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("campusos-admin-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "campus_service_requests" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "campus_appointments" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "campus_support_tickets" }, () => void load())
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [load]);
+
+  const filteredRequests = useMemo(() => {
+    const value = query.trim().toLowerCase();
+    if (!value) return requests;
+    return requests.filter((item) => [item.request_code, item.title, item.service_type, item.purpose, item.user_id].some((field) => (field ?? "").toLowerCase().includes(value)));
+  }, [requests, query]);
+
+  const filteredAppointments = useMemo(() => {
+    const value = query.trim().toLowerCase();
+    if (!value) return appointments;
+    return appointments.filter((item) => [item.appointment_code, item.department, item.staff_name, item.purpose, item.user_id].some((field) => (field ?? "").toLowerCase().includes(value)));
+  }, [appointments, query]);
+
+  const filteredTickets = useMemo(() => {
+    const value = query.trim().toLowerCase();
+    if (!value) return tickets;
+    return tickets.filter((item) => [item.ticket_code, item.category, item.subject, item.description, item.user_id].some((field) => (field ?? "").toLowerCase().includes(value)));
+  }, [tickets, query]);
 
   const analytics = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -117,6 +148,11 @@ const AdminCampusOps = () => {
         </div>
       </div>
 
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between border border-border bg-card p-3">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search request code, student ID, department, ticket..." className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none" />
+        {query && <Button variant="ghost" onClick={() => setQuery("")}>Clear</Button>}
+      </div>
+
       <Tabs defaultValue="requests">
         <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-auto p-0 gap-6">
           <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">Requests <span className="ml-2 text-xs text-muted-foreground">{requests.length}</span></TabsTrigger>
@@ -125,20 +161,20 @@ const AdminCampusOps = () => {
         </TabsList>
 
         <TabsContent value="requests" className="space-y-3 mt-5">
-          {requests.map((request) => <div key={request.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{request.request_code} · {request.service_type}</div><h3 className="font-medium mt-1">{request.title}</h3><p className="text-sm text-muted-foreground mt-1">{request.purpose || "No purpose provided"}</p><p className="text-xs text-muted-foreground mt-3">Submitted {new Date(request.submitted_at).toLocaleString()}</p></div><div className="flex items-center gap-3 min-w-[220px]"><Badge variant="outline">{statusLabel(request.status)}</Badge><Select value={request.status} onValueChange={(value) => void updateRequest(request.id, request.user_id, value)} disabled={updating === request.id}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{requestStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div></div>)}
-          {!loading && requests.length === 0 && <EmptyState label="No service requests yet." />}
+          {filteredRequests.map((request) => <div key={request.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{request.request_code} · {request.service_type}</div><h3 className="font-medium mt-1">{request.title}</h3><p className="text-sm text-muted-foreground mt-1">{request.purpose || "No purpose provided"}</p><p className="text-xs text-muted-foreground mt-3">Submitted {new Date(request.submitted_at).toLocaleString()}</p></div><div className="flex items-center gap-3 min-w-[220px]"><Badge variant="outline">{statusLabel(request.status)}</Badge><Select value={request.status} onValueChange={(value) => void updateRequest(request.id, request.user_id, value)} disabled={updating === request.id}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{requestStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div></div>)}
+          {!loading && filteredRequests.length === 0 && <EmptyState label={query ? "No matching service requests." : "No service requests yet."} />}
         </TabsContent>
         <TabsContent value="appointments" className="space-y-3 mt-5">
-          {appointments.map((appointment) => <div key={appointment.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{appointment.appointment_code}</div><h3 className="font-medium mt-1">{appointment.department} · {appointment.staff_name || "Staff not assigned"}</h3><p className="text-sm text-muted-foreground mt-1">{appointment.appointment_date} · {appointment.appointment_time}</p><p className="text-sm text-muted-foreground mt-1">{appointment.purpose || "No purpose provided"}</p></div><Select value={appointment.status} onValueChange={(value) => void updateAppointment(appointment.id, value)} disabled={updating === appointment.id}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{appointmentStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div>)}
-          {!loading && appointments.length === 0 && <EmptyState label="No appointments yet." />}
+          {filteredAppointments.map((appointment) => <div key={appointment.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{appointment.appointment_code}</div><h3 className="font-medium mt-1">{appointment.department} · {appointment.staff_name || "Staff not assigned"}</h3><p className="text-sm text-muted-foreground mt-1">{appointment.appointment_date} · {appointment.appointment_time}</p><p className="text-sm text-muted-foreground mt-1">{appointment.purpose || "No purpose provided"}</p></div><Select value={appointment.status} onValueChange={(value) => void updateAppointment(appointment.id, value)} disabled={updating === appointment.id}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{appointmentStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div>)}
+          {!loading && filteredAppointments.length === 0 && <EmptyState label={query ? "No matching appointments." : "No appointments yet."} />}
         </TabsContent>
         <TabsContent value="tickets" className="space-y-3 mt-5">
-          {tickets.map((ticket) => <div key={ticket.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{ticket.ticket_code} · {ticket.category}</div><h3 className="font-medium mt-1">{ticket.subject}</h3><p className="text-sm text-muted-foreground mt-1 line-clamp-2">{ticket.description}</p><div className="flex gap-2 mt-3"><Badge variant="outline">{ticket.priority}</Badge><Badge variant="outline">{statusLabel(ticket.status)}</Badge></div></div><Select value={ticket.status} onValueChange={(value) => void updateTicket(ticket.id, value)} disabled={updating === ticket.id}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{ticketStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div>)}
-          {!loading && tickets.length === 0 && <EmptyState label="No support tickets yet." />}
+          {filteredTickets.map((ticket) => <div key={ticket.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{ticket.ticket_code} · {ticket.category}</div><h3 className="font-medium mt-1">{ticket.subject}</h3><p className="text-sm text-muted-foreground mt-1 line-clamp-2">{ticket.description}</p><div className="flex gap-2 mt-3"><Badge variant="outline">{ticket.priority}</Badge><Badge variant="outline">{statusLabel(ticket.status)}</Badge></div></div><Select value={ticket.status} onValueChange={(value) => void updateTicket(ticket.id, value)} disabled={updating === ticket.id}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent>{ticketStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div>)}
+          {!loading && filteredTickets.length === 0 && <EmptyState label={query ? "No matching support tickets." : "No support tickets yet."} />}
         </TabsContent>
       </Tabs>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4"><CheckCircle2 className="h-4 w-4" /> Analytics are calculated from live CampusOS records. <Clock3 className="h-4 w-4 ml-2" /> Refresh after new activity.</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4"><CheckCircle2 className="h-4 w-4" /> Analytics are calculated from live CampusOS records. <Clock3 className="h-4 w-4 ml-2" /> Live updates are enabled.</div>
     </section>
   );
 };
