@@ -17,7 +17,7 @@ interface CourseForm {
   description: string;
 }
 
-const empty: CourseForm = { name: "", level: "Undergraduate", duration: "", annual_fee: "", description: "" };
+const empty: CourseForm = { name: "", level: "Undergraduate", duration: "", annual_fee: "", description: "", min_percentage: "50", eligible_streams: "", eligibility_note: "" };
 
 const AdminCourses = () => {
   const qc = useQueryClient();
@@ -36,7 +36,7 @@ const AdminCourses = () => {
 
   const upsert = useMutation({
     mutationFn: async ({ id, ...values }: CourseForm & { id?: string }) => {
-      const payload = { ...values, annual_fee: values.annual_fee ? parseInt(values.annual_fee) : null };
+      const payload = { ...values, annual_fee: values.annual_fee ? parseInt(values.annual_fee) : null, min_percentage: parseFloat(values.min_percentage) || 0, eligible_streams: values.eligible_streams.split(",").map((v) => v.trim()).filter(Boolean), eligibility_note: values.eligibility_note || null };
       if (id) {
         const { error } = await supabase.from("courses").update(payload).eq("id", id);
         if (error) throw error;
@@ -64,7 +64,7 @@ const AdminCourses = () => {
 
   const startEdit = (c: any) => {
     setEditing(c.id);
-    setForm({ name: c.name, level: c.level, duration: c.duration, annual_fee: c.annual_fee?.toString() || "", description: c.description || "" });
+    setForm({ name: c.name, level: c.level, duration: c.duration, annual_fee: c.annual_fee?.toString() || "", description: c.description || "", min_percentage: c.min_percentage?.toString() || "50", eligible_streams: (c.eligible_streams || []).join(", "), eligibility_note: c.eligibility_note || "" });
   };
 
   const FormFields = () => (
@@ -74,7 +74,7 @@ const AdminCourses = () => {
       <Input placeholder="Duration (e.g. 4 Years)" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
       <Input placeholder="Annual Fee (₹)" type="number" value={form.annual_fee} onChange={(e) => setForm({ ...form, annual_fee: e.target.value })} />
       <div className="col-span-2">
-        <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
+        <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />\n      </div>\n      <Input placeholder="Minimum Percentage" type="number" min="0" max="100" value={form.min_percentage} onChange={(e) => setForm({ ...form, min_percentage: e.target.value })} />\n      <Input placeholder="Eligible Streams (comma separated)" value={form.eligible_streams} onChange={(e) => setForm({ ...form, eligible_streams: e.target.value })} />\n      <div className="col-span-2">\n        <Input placeholder="Eligibility Note" value={form.eligibility_note} onChange={(e) => setForm({ ...form, eligibility_note: e.target.value })} />
       </div>
     </div>
   );
@@ -106,7 +106,7 @@ const AdminCourses = () => {
                 <TableHead>Course</TableHead>
                 <TableHead>Level</TableHead>
                 <TableHead>Duration</TableHead>
-                <TableHead>Fee</TableHead>
+                <TableHead>Fee</TableHead>\n                <TableHead>Eligibility</TableHead>
                 <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -114,7 +114,7 @@ const AdminCourses = () => {
               {courses?.map((c) => (
                 <TableRow key={c.id}>
                   {editing === c.id ? (
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <div className="space-y-3">
                         <FormFields />
                         <div className="flex gap-2">
@@ -128,7 +128,7 @@ const AdminCourses = () => {
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell>{c.level}</TableCell>
                       <TableCell>{c.duration}</TableCell>
-                      <TableCell>{c.annual_fee ? `₹${c.annual_fee.toLocaleString()}` : "—"}</TableCell>
+                      <TableCell>{c.annual_fee ? `₹${c.annual_fee.toLocaleString()}` : "—"}</TableCell>\n                      <TableCell>{c.min_percentage}% {c.eligible_streams?.length ? `• ${c.eligible_streams.join(", ")}` : "• All streams"}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button size="icon" variant="ghost" onClick={() => startEdit(c)}><Pencil className="h-4 w-4" /></Button>
