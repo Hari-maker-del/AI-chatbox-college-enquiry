@@ -1,4 +1,4 @@
-import { createServiceRequest, createAppointment, createSupportTicket, createPaymentIntent, getApplicationStatus, getApplicationTimeline } from "@/lib/campusos";
+import { createServiceRequest, createAppointment, createSupportTicket, createPaymentIntent, getApplicationStatus, getApplicationTimeline, findEligibleCourses } from "@/lib/campusos";
 
 export type CampusIntent =
   | "bonafide"
@@ -36,7 +36,7 @@ export function detectCampusLanguage(input: string): CampusAILanguage {
 }
 
 export function understandCampusIntent(input: string): CampusIntentResult {
-  const text = normalize(input);
+  const text = normalize(input);\n  const percentageMatch = text.match(/(?:percentage|percent|mark|score|cutoff)\\s*(?:is|of|:)?\\s*(\\d+(?:\\.\\d+)?)/i) ?? text.match(/(\\d+(?:\\.\\d+)?)\\s*(?:percent|%)/i);\n  const percentage = percentageMatch ? Number(percentageMatch[1]) : undefined;
 
   if (has(text, "bonafide", "bona fide", "bonafide certificate", "போனஃபைட்", "போனபைட்")) {
     const purpose = has(text, "scholarship", "scholarship ku", "scholarship kku", "ஸ்காலர்ஷிப்")
@@ -59,7 +59,7 @@ export function understandCampusIntent(input: string): CampusIntentResult {
   }
 
   if (has(text, "eligible", "eligibility", "eligible ah", "eligibility check", "தகுதி")) {
-    return { intent: "eligibility", confidence: 0.92, title: "Course Eligibility Check" };
+    const stream = has(text, "computer science", "cse") ? "Computer Science" : has(text, "information technology", "it") ? "Information Technology" : has(text, "commerce") ? "Commerce" : has(text, "science") ? "Science" : undefined;\n    const courseQuery = has(text, "bca") ? "BCA" : has(text, "bsc") ? "B.Sc" : has(text, "btech", "b.tech") ? "B.Tech" : undefined;\n    return { intent: "eligibility", confidence: 0.92, title: "Course Eligibility Check", percentage, stream, courseQuery };
   }
 
   if (has(text, "fee", "fees", "pay fee", "exam fee", "fees pay", "கட்டணம்")) {
@@ -165,7 +165,7 @@ export async function executeCampusIntent(
     return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };
   }
 
-  if (result.intent === "support") {
+  if (result.intent === "eligibility") {\n    if (result.percentage === undefined || Number.isNaN(result.percentage)) {\n      return { ...result, language, message: language === "ta" ? tamilMessage(result) : englishMessage(result, input) };\n    }\n    const eligibility = await findEligibleCourses({\n      percentage: Math.max(0, Math.min(100, result.percentage)),\n      stream: result.stream,\n      courseQuery: result.courseQuery,\n    });\n    const data = { eligibility };\n    return { ...result, language, data, message: language === "ta" ? tamilMessage(result, data) : englishMessage(result, input, data) };\n  }\n\n  if (result.intent === "support") {
     const ticket = await createSupportTicket({
       userId,
       category: "student-support",
