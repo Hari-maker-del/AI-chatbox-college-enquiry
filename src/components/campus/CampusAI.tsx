@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { executeCampusIntent, understandCampusIntent } from "@/lib/campusos-ai";
+import { detectCampusLanguage, executeCampusIntent, understandCampusIntent } from "@/lib/campusos-ai";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -29,7 +29,7 @@ const CampusAI = () => {
   const [intent, setIntent] = useState("Ready");
   const [language, setLanguage] = useState<VoiceLanguage>("en-IN");
   const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
+  const [speaking, setSpeaking] = useState(false);\n  const [detectedLanguage, setDetectedLanguage] = useState<"en" | "ta">("en");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => () => {
@@ -37,13 +37,13 @@ const CampusAI = () => {
     window.speechSynthesis?.cancel();
   }, []);
 
-  const localized = (en: string, ta: string) => (language === "ta-IN" ? ta : en);
+  const selectedLanguage = detectedLanguage === "ta" ? "ta" : "en";\n\n  const localized = (en: string, ta: string) => (selectedLanguage === "ta" ? ta : en);
 
-  const speak = (message: string) => {
+  const speak = (message: string, responseLanguage: "en" | "ta" = selectedLanguage) => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(message);
-    utterance.lang = language;
+    utterance.lang = responseLanguage === "ta" ? "ta-IN" : "en-IN";
     utterance.rate = language === "ta-IN" ? 0.92 : 0.98;
     utterance.pitch = 1;
     utterance.onstart = () => setSpeaking(true);
@@ -78,7 +78,7 @@ const CampusAI = () => {
     recognition.onresult = (event) => {
       let transcript = "";
       for (let i = 0; i < event.results.length; i += 1) transcript += event.results[i][0].transcript;
-      setInput(transcript);
+      setInput(transcript);\n      setDetectedLanguage(detectCampusLanguage(transcript));
     };
     recognition.onerror = () => {
       setListening(false);
