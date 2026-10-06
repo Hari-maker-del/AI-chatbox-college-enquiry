@@ -2,12 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, LogOut, BookOpen, DollarSign, HelpCircle, MessageSquare, ClipboardList, LayoutDashboard } from "lucide-react";
+import { ArrowLeft, LogOut, BookOpen, DollarSign, HelpCircle, MessageSquare, ClipboardList, LayoutDashboard, BriefcaseBusiness } from "lucide-react";
 import AdminFaqs from "@/components/admin/AdminFaqs";
 import AdminCourses from "@/components/admin/AdminCourses";
 import AdminFees from "@/components/admin/AdminFees";
 import AdminChatQueries from "@/components/admin/AdminChatQueries";
 import AdminCampusOps from "@/components/admin/AdminCampusOps";
+import AdminServices from "@/components/admin/AdminServices";
 
 const Admin = () => {
   const { isAdmin, isLoading, signOut } = useAuth();
@@ -46,13 +47,13 @@ const Admin = () => {
         <Tabs defaultValue="campus-ops" className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b border-[#17252a]/15 bg-transparent h-auto p-0 mb-8 gap-1">
             <TabsTrigger value="campus-ops" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><ClipboardList className="h-4 w-4 mr-2" /> Campus Ops</TabsTrigger>
-            <TabsTrigger value="faqs" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><HelpCircle className="h-4 w-4 mr-2" /> FAQs</TabsTrigger>
+            <TabsTrigger value="services" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><BriefcaseBusiness className="h-4 w-4 mr-2" /> Services</TabsTrigger>\n            <TabsTrigger value="faqs" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><HelpCircle className="h-4 w-4 mr-2" /> FAQs</TabsTrigger>
             <TabsTrigger value="courses" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><BookOpen className="h-4 w-4 mr-2" /> Courses</TabsTrigger>
             <TabsTrigger value="fees" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><DollarSign className="h-4 w-4 mr-2" /> Fees</TabsTrigger>
             <TabsTrigger value="queries" className="rounded-none border-b-2 border-transparent px-4 py-3 data-[state=active]:border-[#1f8f91] data-[state=active]:text-[#1f8f91]"><MessageSquare className="h-4 w-4 mr-2" /> Queries</TabsTrigger>
           </TabsList>
           <TabsContent value="campus-ops"><AdminCampusOps /></TabsContent>
-          <TabsContent value="faqs"><AdminFaqs /></TabsContent>
+          <TabsContent value="services"><AdminServices /></TabsContent>\n          <TabsContent value="faqs"><AdminFaqs /></TabsContent>
           <TabsContent value="courses"><AdminCourses /></TabsContent>
           <TabsContent value="fees"><AdminFees /></TabsContent>
           <TabsContent value="queries"><AdminChatQueries /></TabsContent>
