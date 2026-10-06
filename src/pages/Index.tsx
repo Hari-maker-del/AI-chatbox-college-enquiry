@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { getStudentProfile, type StudentProfile } from "@/lib/campusos";
 import {
   CampusRequest,
   createAppointment,
@@ -30,6 +31,7 @@ const Index = () => {
   const [ticketCategory, setTicketCategory] = useState("Academic");
   const [ticketDescription, setTicketDescription] = useState("");
   const [resultMessage, setResultMessage] = useState("");
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -245,7 +247,7 @@ const Index = () => {
         allow="microphone; camera"
       />
 
-      {applicationsOpen && (
+      {studentProfile && user && (\n        <div className="pointer-events-none fixed left-5 top-5 z-[9998] hidden md:block">\n          <div className="border border-[#17252A]/15 bg-[#F7FCFC]/95 px-4 py-3 shadow-lg backdrop-blur">\n            <div className="font-mono text-[9px] tracking-[0.18em] text-[#2B7A78]">CAMPUSOS / STUDENT CONTEXT</div>\n            <div className="mt-1 text-sm font-black uppercase text-[#17252A]">{studentProfile.full_name || "Student"}</div>\n            <div className="mt-1 font-mono text-[10px] uppercase text-[#4E6265]">\n              {studentProfile.department || "Department not set"}{studentProfile.year_level ? ` · YEAR ${studentProfile.year_level}` : ""}{studentProfile.section ? ` · SEC ${studentProfile.section}` : ""}\n            </div>\n          </div>\n        </div>\n      )}\n\n      {applicationsOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0B192C]/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-3xl border border-[#2B7A78]/30 bg-[#F7FCFC] shadow-2xl">
             <div className="flex items-start justify-between border-b border-[#17252A]/15 bg-[#DEF2F1] px-6 py-5">
