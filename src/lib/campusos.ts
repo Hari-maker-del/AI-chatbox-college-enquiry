@@ -1,5 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type EligibleCourse = {
+  id: string;
+  name: string;
+  level: string;
+  duration: string;
+  annual_fee: number | null;
+  description: string | null;
+  min_percentage: number;
+  eligible_streams: string[];
+  eligibility_note: string | null;
+};
+
 const db = supabase as any;
 
 export type CampusRequest = {
@@ -93,6 +105,28 @@ export async function getApplicationTimeline(userId: string, requestId: string) 
 
   if (error) throw error;
   return data ?? [];
+}
+
+export async function findEligibleCourses(input: { percentage: number; stream?: string; courseQuery?: string }) {
+  const { data, error } = await db
+    .from("courses")
+    .select("id, name, level, duration, annual_fee, description, min_percentage, eligible_streams, eligibility_note")
+    .lte("min_percentage", input.percentage)
+    .order("min_percentage", { ascending: true })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+
+  const stream = input.stream?.trim().toLowerCase();
+  const query = input.courseQuery?.trim().toLowerCase();
+  const courses = ((data ?? []) as EligibleCourse[]).filter((course) => {
+    const streams = (course.eligible_streams ?? []).map((value) => value.toLowerCase());
+    const streamMatch = !stream || streams.length === 0 || streams.some((value) => stream.includes(value) || value.includes(stream));
+    const courseMatch = !query || course.name.toLowerCase().includes(query) || (course.description ?? "").toLowerCase().includes(query);
+    return streamMatch && courseMatch;
+  });
+
+  return { percentage: input.percentage, stream: input.stream ?? null, courses };
 }
 
 export async function createAppointment(input: {
