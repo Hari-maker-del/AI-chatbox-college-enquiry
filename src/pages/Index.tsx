@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getStudentProfile, type StudentProfile } from "@/lib/campusos";
 import CampusServiceCatalog from "@/components/student/CampusServiceCatalog";
 import CampusNotifications from "@/components/student/CampusNotifications";
+import CampusRequestConversation from "@/components/student/CampusRequestConversation";
 import {
   CampusRequest,
   createAppointment,
@@ -33,7 +34,7 @@ const Index = () => {
   const [ticketCategory, setTicketCategory] = useState("Academic");
   const [ticketDescription, setTicketDescription] = useState("");
   const [resultMessage, setResultMessage] = useState("");
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);\n  const [conversationRequest, setConversationRequest] = useState<CampusRequest | null>(null);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -261,6 +262,9 @@ const Index = () => {
               <button onClick={() => setApplicationsOpen(false)} className="text-2xl text-[#17252A]" aria-label="Close">×</button>
             </div>
             <div className="max-h-[65vh] overflow-auto p-6">
+              {conversationRequest ? (
+                <CampusRequestConversation request={conversationRequest} onBack={() => setConversationRequest(null)} />
+              ) : null}
               {applications.length === 0 ? (
                 <div className="border border-[#17252A]/10 bg-white p-10 text-center">
                   <div className="text-sm font-bold uppercase tracking-wider text-[#17252A]">NO REQUESTS YET</div>
