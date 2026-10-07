@@ -177,6 +177,7 @@ const AdminCampusOps = () => {
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4"><CheckCircle2 className="h-4 w-4" /> Analytics are calculated from live CampusOS records. <Clock3 className="h-4 w-4 ml-2" /> Live updates are enabled.</div>
     </section>
+      {conversationRequest && <AdminRequestConversation request={conversationRequest} onClose={() => setConversationRequest(null)} />}
   );
 };
 
