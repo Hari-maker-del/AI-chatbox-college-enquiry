@@ -3,6 +3,7 @@ import {
   createAppointment,
   createSupportTicket,
   createPaymentIntent,
+  listStudentFees,
   getApplicationStatus,
   getApplicationTimeline,
   findEligibleCourses,
@@ -140,9 +141,16 @@ const englishMessage = (result: CampusIntentResult, input: string, data?: any, p
       }
       return `I can check your eligibility. Tell me your percentage${profile?.department ? ` (your profile says ${profile.department})` : ""} and preferred course.`;
     case "fee":
+      if (data?.fees) {
+        const pending = data.fees.filter((fee: any) => ["pending","partially_paid","overdue"].includes(fee.status));
+        const total = pending.reduce((sum: number, fee: any) => sum + Number(fee.amount || 0), 0);
+        return pending.length
+          ? `You have ${pending.length} pending fee invoice${pending.length === 1 ? "" : "s"} totaling ₹${total.toLocaleString("en-IN")}. ${pending.slice(0, 3).map((fee: any) => `${fee.title} ₹${Number(fee.amount).toLocaleString("en-IN")}`).join("; ")}.`
+          : "You have no pending fee invoices in CampusOS.";
+      }
       return data?.payment
-        ? `Exam fee payment session created for ₹${data.payment.amount}. Payment status: ${data.payment.payment_status}.`
-        : "I can start the exam fee payment workflow.";
+        ? `Payment session ${data.payment.transaction_ref || data.payment.id.slice(0, 8).toUpperCase()} created for ₹${data.payment.amount}. Gateway status: ${data.payment.payment_status}.`
+        : "I can show your fee ledger or start a payment session.";
     case "support":
       return data?.ticket
         ? `Support ticket ${data.ticket.ticket_code} was created. The support team can now process your issue.`
@@ -175,9 +183,16 @@ const tamilMessage = (result: CampusIntentResult, data?: any, profile?: StudentP
       }
       return "Eligibility check செய்யலாம். உங்கள் percentage மற்றும் விரும்பும் course-ஐ சொல்லுங்கள்.";
     case "fee":
+      if (data?.fees) {
+        const pending = data.fees.filter((fee: any) => ["pending","partially_paid","overdue"].includes(fee.status));
+        const total = pending.reduce((sum: number, fee: any) => sum + Number(fee.amount || 0), 0);
+        return pending.length
+          ? `உங்களிடம் ${pending.length} pending fee invoice உள்ளது. மொத்தம் ₹${total.toLocaleString("en-IN")}.`
+          : "CampusOS-ல் pending fee invoice இல்லை.";
+      }
       return data?.payment
-        ? `₹${data.payment.amount} exam fee payment session உருவாக்கப்பட்டுள்ளது. Payment status: ${data.payment.payment_status}.`
-        : "Exam fee payment workflow-ஐ தொடங்கலாம்.";
+        ? `Payment session ${data.payment.transaction_ref || data.payment.id.slice(0, 8).toUpperCase()} ₹${data.payment.amount}க்கு உருவாக்கப்பட்டுள்ளது. Status: ${data.payment.payment_status}.`
+        : "உங்கள் fee ledger-ஐ காட்டலாம் அல்லது payment session தொடங்கலாம்.";
     case "support":
       return data?.ticket
         ? `உங்கள் support ticket ${data.ticket.ticket_code} உருவாக்கப்பட்டது. Support team இப்போது உங்கள் பிரச்சனையை process செய்யலாம்.`
@@ -294,8 +309,19 @@ export async function executeCampusIntent(
   }
 
   if (result.intent === "fee") {
-    const payment = await createPaymentIntent({ userId, amount: 0 });
-    const data = { payment };
+    const fees = await listStudentFees(userId);
+    const wantsToPay = has(normalize(input), "pay", "payment", "pay fee", "fees pay", "கட்டணம் செலுத்த", "பணம் செலுத்த");
+    if (!wantsToPay || !fees.length) {
+      const data = { fees };
+      return { ...result, language, profile, data, message: language === "ta" ? tamilMessage(result, data, profile) : englishMessage(result, input, data, profile) };
+    }
+    const invoice = fees.find((fee) => ["pending", "partially_paid", "overdue"].includes(fee.status));
+    if (!invoice) {
+      const data = { fees };
+      return { ...result, language, profile, data, message: language === "ta" ? tamilMessage(result, data, profile) : englishMessage(result, input, data, profile) };
+    }
+    const payment = await createPaymentIntent({ userId, invoiceId: invoice.id });
+    const data = { fees, payment };
     return { ...result, language, profile, data, message: language === "ta" ? tamilMessage(result, data, profile) : englishMessage(result, input, data, profile) };
   }
 
