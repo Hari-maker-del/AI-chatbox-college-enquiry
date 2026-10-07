@@ -23,7 +23,9 @@ const AdminCampusOps = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);\n  const [query, setQuery] = useState("");\n  const [conversationRequest, setConversationRequest] = useState<ServiceRequest | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [conversationRequest, setConversationRequest] = useState<ServiceRequest | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
