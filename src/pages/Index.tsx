@@ -9,7 +9,6 @@ import CampusFees from "@/components/student/CampusFees";
 import {
   CampusRequest,
   createAppointment,
-  createPaymentIntent,
   createServiceRequest,
   createSupportTicket,
   listServiceRequests,
@@ -192,11 +191,6 @@ const Index = () => {
           details: { purpose, deliveryMethod: delivery },
         });
         setResultMessage(`Request ${request.request_code} has been recorded and is now under review.`);
-      }
-
-      if (action === "payment") {
-        const payment = await createPaymentIntent({ userId: user!.id, amount: 2500 });
-        setResultMessage(`Payment session ${payment.id.slice(0, 8).toUpperCase()} has been created. A payment gateway can be attached to this intent next.`);
       }
 
       if (action === "appointment") {
