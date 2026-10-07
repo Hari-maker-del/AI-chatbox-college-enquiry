@@ -275,3 +275,45 @@ export async function getCampusServiceByIntent(input: string) {
   }).sort((a, b) => b.score - a.score);
   return scored[0]?.score ? scored[0].service : null;
 }
+
+
+export type CampusMessage = {
+  id: string;
+  request_id: string;
+  user_id: string;
+  sender_role: "student" | "admin";
+  message: string;
+  created_at: string;
+};
+
+export async function listRequestMessages(requestId: string) {
+  const { data, error } = await db
+    .from("campus_request_messages")
+    .select("id,request_id,user_id,sender_role,message,created_at")
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as CampusMessage[];
+}
+
+export async function sendRequestMessage(input: {
+  requestId: string;
+  userId: string;
+  message: string;
+  senderRole: "student" | "admin";
+}) {
+  const message = input.message.trim();
+  if (!message) throw new Error("Message cannot be empty.");
+  const { data, error } = await db
+    .from("campus_request_messages")
+    .insert({
+      request_id: input.requestId,
+      user_id: input.userId,
+      sender_role: input.senderRole,
+      message,
+    })
+    .select("id,request_id,user_id,sender_role,message,created_at")
+    .single();
+  if (error) throw error;
+  return data as CampusMessage;
+}
