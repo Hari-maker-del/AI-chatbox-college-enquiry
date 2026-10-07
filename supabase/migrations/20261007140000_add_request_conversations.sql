@@ -63,3 +63,38 @@ drop trigger if exists campus_request_message_notification on public.campus_requ
 create trigger campus_request_message_notification
 after insert on public.campus_request_messages
 for each row execute function public.notify_request_message();
+
+alter table public.campus_request_messages
+  add column if not exists attachment_path text,
+  add column if not exists attachment_name text;
+
+insert into storage.buckets (id, name, public)
+values ('campus-request-attachments', 'campus-request-attachments', false)
+on conflict (id) do nothing;
+
+drop policy if exists "Students upload request attachments" on storage.objects;
+create policy "Students upload request attachments"
+on storage.objects for insert
+with check (
+  bucket_id = 'campus-request-attachments'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
+
+drop policy if exists "Students read request attachments" on storage.objects;
+create policy "Students read request attachments"
+on storage.objects for select
+using (
+  bucket_id = 'campus-request-attachments'
+  and (
+    auth.uid()::text = (storage.foldername(name))[1]
+    or public.has_role(auth.uid(), 'admin'::app_role)
+  )
+);
+
+drop policy if exists "Students delete own request attachments" on storage.objects;
+create policy "Students delete own request attachments"
+on storage.objects for delete
+using (
+  bucket_id = 'campus-request-attachments'
+  and auth.uid()::text = (storage.foldername(name))[1]
+);
