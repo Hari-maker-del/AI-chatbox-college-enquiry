@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getStudentProfile, type StudentProfile } from "@/lib/campusos";
 import CampusServiceCatalog from "@/components/student/CampusServiceCatalog";
+import CampusNotifications from "@/components/student/CampusNotifications";
 import {
   CampusRequest,
   createAppointment,
