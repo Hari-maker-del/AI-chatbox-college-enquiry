@@ -101,7 +101,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if tg_op = 'INSERT' or new.status is distinct from old.status then
+  if tg_op = 'INSERT' or (tg_op = 'UPDATE' and new.status is distinct from old.status) then
     insert into public.campus_notifications(user_id,title,message,type,entity_type,entity_id,action_label,action_target)
     values (
       new.user_id,
