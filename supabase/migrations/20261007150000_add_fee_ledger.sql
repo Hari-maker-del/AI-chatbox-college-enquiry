@@ -27,6 +27,14 @@ CREATE TABLE IF NOT EXISTS public.campus_fee_payments (
   paid_at TIMESTAMPTZ
 );
 
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES public.campus_fee_invoices(id) ON DELETE SET NULL;
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS payment_method TEXT;
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS transaction_ref TEXT;
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS gateway TEXT;
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS gateway_order_id TEXT;
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS gateway_payment_id TEXT;
+ALTER TABLE public.campus_fee_payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+
 ALTER TABLE public.campus_fee_invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campus_fee_payments ENABLE ROW LEVEL SECURITY;
 
