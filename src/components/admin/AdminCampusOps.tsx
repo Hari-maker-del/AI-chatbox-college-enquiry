@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCw, CheckCircle2, Clock3, Ticket, CalendarDays, FileText, Users, Timer, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AdminRequestConversation from "@/components/admin/AdminRequestConversation";
 
 type ServiceRequest = { id: string; request_code: string; service_type: string; title: string; purpose: string | null; status: string; submitted_at: string; updated_at: string | null; user_id: string };
 type Appointment = { id: string; appointment_code: string; department: string; staff_name: string | null; appointment_date: string; appointment_time: string; purpose: string | null; status: string; user_id: string };
@@ -22,7 +23,7 @@ const AdminCampusOps = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);\n  const [query, setQuery] = useState("");
+  const [updating, setUpdating] = useState<string | null>(null);\n  const [query, setQuery] = useState("");\n  const [conversationRequest, setConversationRequest] = useState<ServiceRequest | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,7 +162,7 @@ const AdminCampusOps = () => {
         </TabsList>
 
         <TabsContent value="requests" className="space-y-3 mt-5">
-          {filteredRequests.map((request) => <div key={request.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{request.request_code} · {request.service_type}</div><h3 className="font-medium mt-1">{request.title}</h3><p className="text-sm text-muted-foreground mt-1">{request.purpose || "No purpose provided"}</p><p className="text-xs text-muted-foreground mt-3">Submitted {new Date(request.submitted_at).toLocaleString()}</p></div><div className="flex items-center gap-3 min-w-[220px]"><Badge variant="outline">{statusLabel(request.status)}</Badge><Select value={request.status} onValueChange={(value) => void updateRequest(request.id, request.user_id, value)} disabled={updating === request.id}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{requestStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div></div>)}
+          {filteredRequests.map((request) => <div key={request.id} className="border border-border bg-card p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"><div><div className="text-xs tracking-[0.14em] text-muted-foreground">{request.request_code} · {request.service_type}</div><h3 className="font-medium mt-1">{request.title}</h3><p className="text-sm text-muted-foreground mt-1">{request.purpose || "No purpose provided"}</p><p className="text-xs text-muted-foreground mt-3">Submitted {new Date(request.submitted_at).toLocaleString()}</p></div><div className="flex items-center gap-3 min-w-[220px]"><Button variant="outline" size="sm" onClick={() => setConversationRequest(request)}>Message</Button><Badge variant="outline">{statusLabel(request.status)}</Badge><Select value={request.status} onValueChange={(value) => void updateRequest(request.id, request.user_id, value)} disabled={updating === request.id}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{requestStatuses.map((status) => <SelectItem key={status} value={status}>{statusLabel(status)}</SelectItem>)}</SelectContent></Select></div></div>)}
           {!loading && filteredRequests.length === 0 && <EmptyState label={query ? "No matching service requests." : "No service requests yet."} />}
         </TabsContent>
         <TabsContent value="appointments" className="space-y-3 mt-5">
