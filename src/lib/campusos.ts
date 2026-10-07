@@ -289,7 +289,7 @@ export type CampusMessage = {
 export async function listRequestMessages(requestId: string) {
   const { data, error } = await db
     .from("campus_request_messages")
-    .select("id,request_id,user_id,sender_role,message,created_at")
+    .select("id,request_id,user_id,sender_role,message,created_at,attachment_path,attachment_name")
     .eq("request_id", requestId)
     .order("created_at", { ascending: true });
   if (error) throw error;
