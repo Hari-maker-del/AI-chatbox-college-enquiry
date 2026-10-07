@@ -5,6 +5,7 @@ import { getStudentProfile, type StudentProfile } from "@/lib/campusos";
 import CampusServiceCatalog from "@/components/student/CampusServiceCatalog";
 import CampusNotifications from "@/components/student/CampusNotifications";
 import CampusRequestConversation from "@/components/student/CampusRequestConversation";
+import CampusFees from "@/components/student/CampusFees";
 import {
   CampusRequest,
   createAppointment,
@@ -328,10 +329,7 @@ const Index = () => {
                   </label>
                 </>}
 
-                {action === "payment" && <div className="grid grid-cols-2 gap-4">
-                  <div className="border border-[#17252A]/15 bg-white p-4"><div className="text-xs text-[#4E6265]">Exam Fee</div><div className="mt-2 text-2xl font-black text-[#17252A]">₹2,500</div></div>
-                  <div className="border border-[#17252A]/15 bg-white p-4"><div className="text-xs text-[#4E6265]">Due Date</div><div className="mt-2 text-lg font-black text-[#17252A]">14 OCT 2026</div></div>
-                </div>}
+                {action === "payment" && user && <CampusFees userId={user.id} />}
 
                 {action === "appointment" && <>
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#17252A]">Department
@@ -374,10 +372,10 @@ const Index = () => {
                 </>}
 
                 <div className="flex justify-end gap-3 border-t border-[#17252A]/10 pt-5">
-                  <button type="button" onClick={close} className="border border-[#17252A]/20 px-5 py-3 font-mono text-xs font-bold uppercase tracking-wider text-[#17252A]">CANCEL</button>
-                  <button disabled={saving} type="submit" className="bg-[#FF6500] px-6 py-3 font-mono text-xs font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-60">
-                    {saving ? "SAVING..." : action === "payment" ? "CREATE PAYMENT SESSION" : "SUBMIT REQUEST"}
-                  </button>
+                  <button type="button" onClick={close} className="border border-[#17252A]/20 px-5 py-3 font-mono text-xs font-bold uppercase tracking-wider text-[#17252A]">CLOSE</button>
+                  {action !== "payment" && <button disabled={saving} type="submit" className="bg-[#FF6500] px-6 py-3 font-mono text-xs font-bold uppercase tracking-wider text-white disabled:cursor-not-allowed disabled:opacity-60">
+                    {saving ? "SAVING..." : "SUBMIT REQUEST"}
+                  </button>}
                 </div>
               </form>
             )}
