@@ -53,7 +53,7 @@ export default function CampusFees({ userId, onPay }: { userId: string; onPay?: 
           {loading ? <div className="p-6 text-sm text-[#4E6265]">Loading fee records...</div> : fees.length === 0 ? <div className="p-8 text-center text-sm text-[#4E6265]">No fee invoices have been assigned to your account.</div> : fees.map((fee) => (
             <div key={fee.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div><div className="font-bold text-[#17252A]">{fee.title}</div><div className="mt-1 text-xs text-[#4E6265]">{fee.category}{fee.due_date ? ` · Due ${new Date(fee.due_date).toLocaleDateString()}` : ""}</div>{fee.description && <div className="mt-2 text-sm text-[#4E6265]">{fee.description}</div>}</div>
-              <div className="flex items-center gap-3"><div className="text-lg font-black text-[#17252A]">{money(fee.amount)}</div><Badge variant="outline">{statusLabel(fee.status)}</Badge>{pending.includes(fee) && <Button size="sm" disabled={paying === fee.id} onClick={() => void startPayment(fee)}>{paying === fee.id ? "CREATING..." : "PAY NOW"}</Button>}</div>
+              <div className="flex items-center gap-3"><div className="text-lg font-black text-[#17252A]">{money(fee.amount)}</div><Badge variant="outline">{statusLabel(fee.status)}</Badge>{pending.includes(fee) && <Button type="button" size="sm" disabled={paying === fee.id} onClick={() => void startPayment(fee)}>{paying === fee.id ? "CREATING..." : "PAY NOW"}</Button>}</div>
             </div>
           ))}
         </div>
