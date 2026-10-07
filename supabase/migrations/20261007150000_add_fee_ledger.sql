@@ -53,7 +53,19 @@ CREATE POLICY "Students read own payments" ON public.campus_fee_payments FOR SEL
 
 DROP POLICY IF EXISTS "Students create own payment intents" ON public.campus_fee_payments;
 CREATE POLICY "Students create own payment intents" ON public.campus_fee_payments FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id AND payment_status = 'initiated');
+  WITH CHECK (
+    auth.uid() = user_id
+    AND payment_status = 'initiated'
+    AND invoice_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.campus_fee_invoices invoice
+      WHERE invoice.id = invoice_id
+        AND invoice.user_id = auth.uid()
+        AND invoice.status IN ('pending','partially_paid','overdue')
+        AND amount = invoice.amount
+    )
+  );
 
 DROP POLICY IF EXISTS "Admins manage payments" ON public.campus_fee_payments;
 CREATE POLICY "Admins manage payments" ON public.campus_fee_payments FOR ALL TO authenticated
