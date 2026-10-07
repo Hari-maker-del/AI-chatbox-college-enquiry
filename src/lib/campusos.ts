@@ -315,6 +315,8 @@ export type CampusMessage = {
   sender_role: "student" | "admin";
   message: string;
   created_at: string;
+  attachment_path?: string | null;
+  attachment_name?: string | null;
 };
 
 export async function listRequestMessages(requestId: string) {
@@ -332,6 +334,8 @@ export async function sendRequestMessage(input: {
   userId: string;
   message: string;
   senderRole: "student" | "admin";
+  attachmentPath?: string | null;
+  attachmentName?: string | null;
 }) {
   const message = input.message.trim();
   if (!message) throw new Error("Message cannot be empty.");
@@ -342,8 +346,10 @@ export async function sendRequestMessage(input: {
       user_id: input.userId,
       sender_role: input.senderRole,
       message,
+      attachment_path: input.attachmentPath ?? null,
+      attachment_name: input.attachmentName ?? null,
     })
-    .select("id,request_id,user_id,sender_role,message,created_at")
+    .select("id,request_id,user_id,sender_role,message,created_at,attachment_path,attachment_name")
     .single();
   if (error) throw error;
   return data as CampusMessage;
