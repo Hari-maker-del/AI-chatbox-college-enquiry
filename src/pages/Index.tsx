@@ -257,6 +257,9 @@ const Index = () => {
         allow="microphone; camera"
       />
 
+      <CampusNotifications />
+      <CampusServiceCatalog />
+
       {studentProfile && user && (
         <div className="pointer-events-none fixed left-5 top-5 z-[9998] hidden md:block">
           <div className="border border-[#17252A]/15 bg-[#F7FCFC]/95 px-4 py-3 shadow-lg backdrop-blur">
