@@ -175,24 +175,55 @@ export async function createSupportTicket(input: {
   return data;
 }
 
-export async function createPaymentIntent(input: {
-  userId: string;
-  amount: number;
-}) {
-  const { data, error } = await db
-    .from("campus_fee_payments")
-    .insert({
-      user_id: input.userId,
-      amount: input.amount,
-      payment_status: "initiated",
-    })
-    .select("id, amount, payment_status, created_at")
-    .single();
+export type CampusFeeInvoice = {
+  id: string; user_id: string; title: string; category: string; amount: number;
+  due_date: string | null; status: string; description: string | null; created_at: string; updated_at: string;
+};
 
+export type CampusFeePayment = {
+  id: string; user_id: string; invoice_id: string | null; amount: number; payment_status: string;
+  payment_method: string | null; transaction_ref: string | null; gateway: string | null; created_at: string; paid_at: string | null;
+};
+
+export async function listStudentFees(userId: string) {
+  const { data, error } = await db.from("campus_fee_invoices")
+    .select("id,user_id,title,category,amount,due_date,status,description,created_at,updated_at")
+    .eq("user_id", userId).order("due_date", { ascending: true, nullsFirst: false });
   if (error) throw error;
-  return data;
+  return (data ?? []) as CampusFeeInvoice[];
 }
 
+export async function listStudentPayments(userId: string) {
+  const { data, error } = await db.from("campus_fee_payments")
+    .select("id,user_id,invoice_id,amount,payment_status,payment_method,transaction_ref,gateway,created_at,paid_at")
+    .eq("user_id", userId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as CampusFeePayment[];
+}
+
+export async function createPaymentIntent(input: { userId: string; invoiceId?: string; amount?: number }) {
+  let amount = input.amount ?? 0;
+  if (input.invoiceId) {
+    const { data: invoice, error } = await db.from("campus_fee_invoices")
+      .select("id,amount,status").eq("id", input.invoiceId).eq("user_id", input.userId).single();
+    if (invoiceErrorOrNone(invoice, error)) throw error;
+    if (invoice.status === "paid" || invoice.status === "cancelled") throw new Error("This fee is no longer payable.");
+    amount = invoice.amount;
+  }
+  if (!amount || amount <= 0) throw new Error("No payable fee amount was provided.");
+  const transactionRef = `CAMPUS-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+  const { data, error } = await db.from("campus_fee_payments").insert({
+    user_id: input.userId, invoice_id: input.invoiceId ?? null, amount,
+    payment_status: "initiated", transaction_ref: transactionRef, gateway: "gateway_pending",
+  }).select("id,user_id,invoice_id,amount,payment_status,payment_method,transaction_ref,gateway,created_at,paid_at").single();
+  if (error) throw error;
+  return data as CampusFeePayment;
+}
+
+function invoiceErrorOrNone(invoice: any, error: any) {
+  if (error || !invoice) return true;
+  return false;
+}
 
 export type StudentProfile = {
   user_id: string;
