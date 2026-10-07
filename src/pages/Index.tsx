@@ -264,8 +264,7 @@ const Index = () => {
             <div className="max-h-[65vh] overflow-auto p-6">
               {conversationRequest ? (
                 <CampusRequestConversation request={conversationRequest} onBack={() => setConversationRequest(null)} />
-              ) : null}
-              {applications.length === 0 ? (
+              ) : applications.length === 0 ? (
                 <div className="border border-[#17252A]/10 bg-white p-10 text-center">
                   <div className="text-sm font-bold uppercase tracking-wider text-[#17252A]">NO REQUESTS YET</div>
                   <p className="mt-2 text-sm text-[#4E6265]">Start a student service from the CampusOS dashboard.</p>
@@ -278,7 +277,10 @@ const Index = () => {
                         <div className="font-black uppercase text-[#17252A]">{item.title}</div>
                         <div className="mt-1 font-mono text-xs text-[#4E6265]">{item.request_code} · {new Date(item.submitted_at).toLocaleDateString()}</div>
                       </div>
-                      <div className="font-mono text-xs font-bold uppercase tracking-wider text-[#2B7A78]">{item.status.replaceAll("_", " ")}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="font-mono text-xs font-bold uppercase tracking-wider text-[#2B7A78]">{item.status.replaceAll("_", " ")}</div>
+                        <button onClick={() => setConversationRequest(item)} className="border border-[#17252A]/15 px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-wider text-[#17252A] hover:border-[#2B7A78]">MESSAGE</button>
+                      </div>
                     </div>
                   ))}
                 </div>
