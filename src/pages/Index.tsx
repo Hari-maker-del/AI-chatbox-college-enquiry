@@ -35,7 +35,8 @@ const Index = () => {
   const [ticketCategory, setTicketCategory] = useState("Academic");
   const [ticketDescription, setTicketDescription] = useState("");
   const [resultMessage, setResultMessage] = useState("");
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);\n  const [conversationRequest, setConversationRequest] = useState<CampusRequest | null>(null);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [conversationRequest, setConversationRequest] = useState<CampusRequest | null>(null);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -146,6 +147,17 @@ const Index = () => {
     return () => frame.removeEventListener("load", installInteractions);
   }, [user]);
 
+  useEffect(() => {
+    const openPayments = () => {
+      if (!user) { toast.error("Sign in to view your fees."); return; }
+      setSubmitted(false);
+      setResultMessage("");
+      setAction("payment");
+    };
+    window.addEventListener("campusos:open-payments", openPayments);
+    return () => window.removeEventListener("campusos:open-payments", openPayments);
+  }, [user]);
+
   const close = () => {
     setAction(null);
     setSubmitted(false);
@@ -251,7 +263,19 @@ const Index = () => {
         allow="microphone; camera"
       />
 
-      {studentProfile && user && (\n        <div className="pointer-events-none fixed left-5 top-5 z-[9998] hidden md:block">\n          <div className="border border-[#17252A]/15 bg-[#F7FCFC]/95 px-4 py-3 shadow-lg backdrop-blur">\n            <div className="font-mono text-[9px] tracking-[0.18em] text-[#2B7A78]">CAMPUSOS / STUDENT CONTEXT</div>\n            <div className="mt-1 text-sm font-black uppercase text-[#17252A]">{studentProfile.full_name || "Student"}</div>\n            <div className="mt-1 font-mono text-[10px] uppercase text-[#4E6265]">\n              {studentProfile.department || "Department not set"}{studentProfile.year_level ? ` · YEAR ${studentProfile.year_level}` : ""}{studentProfile.section ? ` · SEC ${studentProfile.section}` : ""}\n            </div>\n          </div>\n        </div>\n      )}\n\n      {applicationsOpen && (
+      {studentProfile && user && (
+        <div className="pointer-events-none fixed left-5 top-5 z-[9998] hidden md:block">
+          <div className="border border-[#17252A]/15 bg-[#F7FCFC]/95 px-4 py-3 shadow-lg backdrop-blur">
+            <div className="font-mono text-[9px] tracking-[0.18em] text-[#2B7A78]">CAMPUSOS / STUDENT CONTEXT</div>
+            <div className="mt-1 text-sm font-black uppercase text-[#17252A]">{studentProfile.full_name || "Student"}</div>
+            <div className="mt-1 font-mono text-[10px] uppercase text-[#4E6265]">
+              {studentProfile.department || "Department not set"}{studentProfile.year_level ? ` · YEAR ${studentProfile.year_level}` : ""}{studentProfile.section ? ` · SEC ${studentProfile.section}` : ""}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {applicationsOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0B192C]/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-3xl border border-[#2B7A78]/30 bg-[#F7FCFC] shadow-2xl">
             <div className="flex items-start justify-between border-b border-[#17252A]/15 bg-[#DEF2F1] px-6 py-5">
