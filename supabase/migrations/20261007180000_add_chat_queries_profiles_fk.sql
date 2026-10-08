@@ -1,5 +1,5 @@
--- Keep chat query ownership tied to an existing auth profile.
--- This is safe on fresh databases and only adds the FK when it is absent.
+-- Keep chat query ownership tied to the authenticated user represented by the profile.
+-- profiles.id is an internal row id; profiles.user_id is the auth.users id.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -10,6 +10,6 @@ BEGIN
   ) THEN
     ALTER TABLE public.chat_queries
       ADD CONSTRAINT chat_queries_user_id_fkey
-      FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+      FOREIGN KEY (user_id) REFERENCES public.profiles(user_id) ON DELETE CASCADE;
   END IF;
 END $$;
