@@ -3,16 +3,176 @@ import { Bell, CheckCircle2, Clock3, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-type Notification={id:string;title:string;message:string;type:string;entity_type:string|null;entity_id:string|null;action_label:string|null;action_target:string|null;language:string;read_at:string|null;created_at:string};
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  action_label: string | null;
+  action_target: string | null;
+  language: string;
+  read_at: string | null;
+  created_at: string;
+};
 
-export default function CampusNotifications(){
- const {user}=useAuth(); const [open,setOpen]=useState(false); const [items,setItems]=useState<Notification[]>([]);
- const load=async()=>{if(!user)return;const {data}=await supabase.from("campus_notifications").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(30);setItems((data as Notification[])??[]);};
- useEffect(()=>{if(!user){setItems([]);return;}void load();const channel=supabase.channel(`campus-notifications-${user.id}`).on("postgres_changes",{event:"INSERT",schema:"public",table:"campus_notifications",filter:`user_id=eq.${user.id}`},payload=>{const item=payload.new as Notification;setItems(current=>[item,...current].slice(0,30));}).subscribe();return()=>{void supabase.removeChannel(channel);};},[user]);
- const unread=useMemo(()=>items.filter(x=>!x.read_at).length,[items]);
- const openNotification=async(item:Notification)=>{await markRead(item.id);if(item.action_target==="messages"&&item.entity_id){window.dispatchEvent(new CustomEvent("campusos:open-request",{detail:{requestId:item.entity_id}}));}else if(item.action_target==="applications"){window.dispatchEvent(new CustomEvent("campusos:open-applications"));}else if(item.action_target==="payments"){window.dispatchEvent(new CustomEvent("campusos:open-payments"));}};\n const markRead=async(id:string)=>{await supabase.from("campus_notifications").update({read_at:new Date().toISOString()}).eq("id",id);setItems(items=>items.map(x=>x.id===id?{...x,read_at:new Date().toISOString()}:x));};
- const markAll=async()=>{if(!user)return;const now=new Date().toISOString();await supabase.from("campus_notifications").update({read_at:now}).eq("user_id",user.id).is("read_at",null);setItems(items=>items.map(x=>({...x,read_at:x.read_at??now})));};
- if(!user)return null;
- return <><button onClick={()=>setOpen(true)} aria-label="Open notifications" className="fixed right-6 top-6 z-[9998] flex h-11 w-11 items-center justify-center border border-[#17252a]/15 bg-white text-[#17252a] shadow-lg transition hover:bg-[#def2f1]"><Bell className="h-4 w-4"/>{unread>0&&<span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center bg-[#ff6500] px-1 font-mono text-[9px] font-bold text-white">{unread>9?"9+":unread}</span>}</button>
- {open&&<div className="fixed inset-0 z-[10001] flex items-start justify-end bg-[#0b192c]/30 p-4 pt-20 md:p-6 md:pt-24"><section className="w-full max-w-md border border-[#17252a]/15 bg-[#f7fcfc] shadow-2xl"><header className="flex items-center justify-between border-b border-[#17252a]/10 bg-[#def2f1] p-5"><div><div className="font-mono text-[10px] tracking-[0.2em] text-[#2b7a78]">CAMPUSOS / INBOX</div><h2 className="mt-1 text-xl font-black uppercase">NOTIFICATIONS</h2></div><div className="flex items-center gap-3"><button onClick={()=>void markAll()} className="font-mono text-[9px] font-bold uppercase text-[#2b7a78]">Mark all read</button><button onClick={()=>setOpen(false)}><X className="h-5 w-5"/></button></div></header><div className="max-h-[70vh] overflow-auto">{items.length===0?<div className="p-10 text-center text-sm text-[#4e6265]">You're all caught up.</div>:items.map(item=><button key={item.id} onClick={()=>void openNotification(item)} className={`w-full border-b border-[#17252a]/10 p-4 text-left transition hover:bg-white ${item.read_at?"bg-[#f7fcfc]":"bg-white"}`}><div className="flex gap-3"><div className={`mt-0.5 shrink-0 ${item.type==="success"?"text-[#2b7a78]":item.type==="warning"?"text-[#ff6500]":"text-[#2b7a78]"}`}>{item.read_at?<Clock3 className="h-4 w-4"/>:<CheckCircle2 className="h-4 w-4"/>}</div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><span className="text-sm font-black uppercase text-[#17252a]">{item.title}</span>{!item.read_at&&<span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#ff6500]"/>}</div><p className="mt-1 text-xs leading-5 text-[#4e6265]">{item.message}</p><div className="mt-2 flex items-center justify-between"><span className="font-mono text-[9px] uppercase tracking-wider text-[#839092]">{new Date(item.created_at).toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</span>{item.action_label&&<span className="font-mono text-[9px] font-bold uppercase text-[#2b7a78]">{item.action_label} →</span>}</div></div></div></button>)}</div></section></div>}</>;
+export default function CampusNotifications() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<Notification[]>([]);
+
+  const load = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("campus_notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setItems((data as Notification[]) ?? []);
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setItems([]);
+      return;
+    }
+
+    void load();
+    const channel = supabase
+      .channel(`campus-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "campus_notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const item = payload.new as Notification;
+          setItems((current) => [item, ...current].slice(0, 30));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
+
+  const markRead = async (id: string) => {
+    const now = new Date().toISOString();
+    await supabase.from("campus_notifications").update({ read_at: now }).eq("id", id);
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, read_at: now } : item)));
+  };
+
+  const openNotification = async (item: Notification) => {
+    await markRead(item.id);
+    if (item.action_target === "messages" && item.entity_id) {
+      window.dispatchEvent(new CustomEvent("campusos:open-request", { detail: { requestId: item.entity_id } }));
+    } else if (item.action_target === "applications") {
+      window.dispatchEvent(new CustomEvent("campusos:open-applications"));
+    } else if (item.action_target === "payments") {
+      window.dispatchEvent(new CustomEvent("campusos:open-payments"));
+    }
+  };
+
+  const markAll = async () => {
+    if (!user) return;
+    const now = new Date().toISOString();
+    await supabase
+      .from("campus_notifications")
+      .update({ read_at: now })
+      .eq("user_id", user.id)
+      .is("read_at", null);
+    setItems((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? now })));
+  };
+
+  if (!user) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open notifications"
+        className="fixed right-6 top-6 z-[9998] flex h-11 w-11 items-center justify-center border border-[#17252a]/15 bg-white text-[#17252a] shadow-lg transition hover:bg-[#def2f1]"
+      >
+        <Bell className="h-4 w-4" />
+        {unread > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center bg-[#ff6500] px-1 font-mono text-[9px] font-bold text-white">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-[10001] flex items-start justify-end bg-[#0b192c]/30 p-4 pt-20 md:p-6 md:pt-24">
+          <section className="w-full max-w-md border border-[#17252a]/15 bg-[#f7fcfc] shadow-2xl">
+            <header className="flex items-center justify-between border-b border-[#17252a]/10 bg-[#def2f1] p-5">
+              <div>
+                <div className="font-mono text-[10px] tracking-[0.2em] text-[#2b7a78]">CAMPUSOS / INBOX</div>
+                <h2 className="mt-1 text-xl font-black uppercase">NOTIFICATIONS</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => void markAll()} className="font-mono text-[9px] font-bold uppercase text-[#2b7a78]">
+                  Mark all read
+                </button>
+                <button onClick={() => setOpen(false)} aria-label="Close notifications">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </header>
+
+            <div className="max-h-[70vh] overflow-auto">
+              {items.length === 0 ? (
+                <div className="p-10 text-center text-sm text-[#4e6265]">You're all caught up.</div>
+              ) : (
+                items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => void openNotification(item)}
+                    className={`w-full border-b border-[#17252a]/10 p-4 text-left transition hover:bg-white ${item.read_at ? "bg-[#f7fcfc]" : "bg-white"}`}
+                  >
+                    <div className="flex gap-3">
+                      <div
+                        className={`mt-0.5 shrink-0 ${
+                          item.type === "success" ? "text-[#2b7a78]" : item.type === "warning" ? "text-[#ff6500]" : "text-[#2b7a78]"
+                        }`}
+                      >
+                        {item.read_at ? <Clock3 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-sm font-black uppercase text-[#17252a]">{item.title}</span>
+                          {!item.read_at && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#ff6500]" />}
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-[#4e6265]">{item.message}</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-[#839092]">
+                            {new Date(item.created_at).toLocaleString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          {item.action_label && (
+                            <span className="font-mono text-[9px] font-bold uppercase text-[#2b7a78]">{item.action_label} →</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+    </>
+  );
 }
