@@ -1,73 +1,87 @@
-# Welcome to your Lovable project
+# CampusOS — Your Digital Campus
 
-## Project info
+CampusOS is an AI-powered college service platform that turns common campus workflows into one student-first experience.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Core flow
 
-## How can I edit this code?
+**DISCOVER → REQUEST → APPLY / PROCESS → TRACK → COMPLETE**
 
-There are several ways of editing your application.
+Students can discover services, submit requests, track applications, receive notifications, message campus teams, review fee invoices, and use AI assistance. Administrators get operational views for requests, services, fees, courses, FAQs, support and campus activity.
 
-**Use Lovable**
+## Technology
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS + shadcn/ui
+- Supabase Auth, Postgres, Row Level Security and Realtime
+- Supabase Edge Functions
+- AI gateway integration for the CampusOS assistant
+- Vitest
 
-Changes made via Lovable will be committed automatically to this repo.
+## Local development
 
-**Use your preferred IDE**
+Requirements: Node.js 20+ and npm.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+git clone https://github.com/Hari-maker-del/AI-chatbox-college-enquiry.git
+cd AI-chatbox-college-enquiry
+npm ci
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Production build:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run build
+```
 
-**Use GitHub Codespaces**
+Lint:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+npm run lint
+```
 
-## What technologies are used for this project?
+Tests:
 
-This project is built with:
+```bash
+npm test
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Supabase
 
-## How can I deploy this project?
+Apply migrations from `supabase/migrations` in timestamp order. The chat Edge Function requires the `LOVABLE_API_KEY` secret in the Supabase project.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+The chat function is configured with JWT verification in `supabase/config.toml`.
 
-## Can I connect a custom domain to my Lovable project?
+## Security model
 
-Yes, you can!
+Student-facing records are protected with Supabase RLS and are scoped to the authenticated user. Administrative operations use the separate `user_roles` table rather than client-controlled role flags.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Payment records in this repository currently provide the application-side fee ledger and payment-session workflow. A production deployment still needs a real payment gateway, server-side webhook verification, and reconciliation before real money movement is enabled.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Project structure
+
+```
+src/
+  components/
+    admin/        # Campus operations and administration
+    campus/       # AI/campus intelligence
+    student/      # Student services, notifications, fees and requests
+  hooks/          # Authentication and UI hooks
+  lib/            # CampusOS domain logic and AI intent handling
+  pages/          # Student and admin application shells
+
+supabase/
+  functions/chat/ # Authenticated AI chat gateway
+  migrations/     # Database schema, RLS and workflow migrations
+
+public/campusos/ # CampusOS visual experience
+```
+
+## Important deployment note
+
+College-specific admission rules, fees, contact details and deadlines should be entered into authoritative campus data before production use. The AI assistant is instructed not to invent institution-specific facts.
+
+## Repository
+
+urlGitHub repositoryhttps://github.com/Hari-maker-del/AI-chatbox-college-enquiry
