@@ -42,6 +42,9 @@ export type Database = {
         Row: {
           annual_fee: number | null
           created_at: string
+          min_percentage: number | null
+          eligible_streams: string[] | null
+          eligibility_note: string | null
           description: string | null
           duration: string
           id: string
@@ -52,6 +55,9 @@ export type Database = {
         Insert: {
           annual_fee?: number | null
           created_at?: string
+          min_percentage?: number | null
+          eligible_streams?: string[] | null
+          eligibility_note?: string | null
           description?: string | null
           duration: string
           id?: string
@@ -62,6 +68,9 @@ export type Database = {
         Update: {
           annual_fee?: number | null
           created_at?: string
+          min_percentage?: number | null
+          eligible_streams?: string[] | null
+          eligibility_note?: string | null
           description?: string | null
           duration?: string
           id?: string
@@ -133,6 +142,12 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          phone: string | null
+          roll_number: string | null
+          department: string | null
+          year_level: string | null
+          section: string | null
+          interests: string[] | null
         }
         Insert: {
           created_at?: string
@@ -141,6 +156,12 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          phone?: string | null
+          roll_number?: string | null
+          department?: string | null
+          year_level?: string | null
+          section?: string | null
+          interests?: string[] | null
         }
         Update: {
           created_at?: string
@@ -149,6 +170,12 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          phone?: string | null
+          roll_number?: string | null
+          department?: string | null
+          year_level?: string | null
+          section?: string | null
+          interests?: string[] | null
         }
         Relationships: []
       }
@@ -171,7 +198,62 @@ export type Database = {
         Relationships: []
       }
     }
+      campus_service_requests: {
+        Row: { id: string; user_id: string; request_code: string; service_type: string; title: string; purpose: string | null; delivery_method: string | null; details: Json; status: string; submitted_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; request_code?: string; service_type: string; title: string; purpose?: string | null; delivery_method?: string | null; details?: Json; status?: string; submitted_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; request_code?: string; service_type?: string; title?: string; purpose?: string | null; delivery_method?: string | null; details?: Json; status?: string; submitted_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      campus_request_events: {
+        Row: { id: string; request_id: string; user_id: string; status: string; note: string | null; created_at: string }
+        Insert: { id?: string; request_id: string; user_id: string; status: string; note?: string | null; created_at?: string }
+        Update: { id?: string; request_id?: string; user_id?: string; status?: string; note?: string | null; created_at?: string }
+        Relationships: []
+      }
+      campus_appointments: {
+        Row: { id: string; user_id: string; appointment_code: string; department: string; staff_name: string | null; appointment_date: string; appointment_time: string; purpose: string | null; status: string; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; appointment_code?: string; department: string; staff_name?: string | null; appointment_date: string; appointment_time: string; purpose?: string | null; status?: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; appointment_code?: string; department?: string; staff_name?: string | null; appointment_date?: string; appointment_time?: string; purpose?: string | null; status?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      campus_support_tickets: {
+        Row: { id: string; user_id: string; ticket_code: string; category: string; subject: string; description: string; status: string; priority: string; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; ticket_code?: string; category: string; subject: string; description: string; status?: string; priority?: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; ticket_code?: string; category?: string; subject?: string; description?: string; status?: string; priority?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      campus_notifications: {
+        Row: { id: string; user_id: string; title: string; message: string; type: string; entity_type: string | null; entity_id: string | null; action_label: string | null; action_target: string | null; language: string; read_at: string | null; created_at: string }
+        Insert: { id?: string; user_id: string; title: string; message: string; type?: string; entity_type?: string | null; entity_id?: string | null; action_label?: string | null; action_target?: string | null; language?: string; read_at?: string | null; created_at?: string }
+        Update: { id?: string; user_id?: string; title?: string; message?: string; type?: string; entity_type?: string | null; entity_id?: string | null; action_label?: string | null; action_target?: string | null; language?: string; read_at?: string | null; created_at?: string }
+        Relationships: []
+      }
+      campus_request_messages: {
+        Row: { id: string; request_id: string; user_id: string; sender_role: string; message: string; created_at: string; attachment_path: string | null; attachment_name: string | null }
+        Insert: { id?: string; request_id: string; user_id: string; sender_role: string; message: string; created_at?: string; attachment_path?: string | null; attachment_name?: string | null }
+        Update: { id?: string; request_id?: string; user_id?: string; sender_role?: string; message?: string; created_at?: string; attachment_path?: string | null; attachment_name?: string | null }
+        Relationships: []
+      }
+      campus_fee_invoices: {
+        Row: { id: string; user_id: string; title: string; category: string; amount: number; due_date: string | null; status: string; description: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; title: string; category?: string; amount: number; due_date?: string | null; status?: string; description?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; title?: string; category?: string; amount?: number; due_date?: string | null; status?: string; description?: string | null; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      campus_fee_payments: {
+        Row: { id: string; user_id: string; invoice_id: string | null; amount: number; payment_status: string; payment_method: string | null; transaction_ref: string | null; gateway: string | null; gateway_order_id: string | null; gateway_payment_id: string | null; created_at: string; paid_at: string | null }
+        Insert: { id?: string; user_id: string; invoice_id?: string | null; amount: number; payment_status?: string; payment_method?: string | null; transaction_ref?: string | null; gateway?: string | null; gateway_order_id?: string | null; gateway_payment_id?: string | null; created_at?: string; paid_at?: string | null }
+        Update: { id?: string; user_id?: string; invoice_id?: string | null; amount?: number; payment_status?: string; payment_method?: string | null; transaction_ref?: string | null; gateway?: string | null; gateway_order_id?: string | null; gateway_payment_id?: string | null; created_at?: string; paid_at?: string | null }
+        Relationships: []
+      }
+      campus_service_catalog: {
+        Row: { id: string; name: string; service_type: string; description: string | null; department: string | null; keywords: string[]; requirements: string[]; active: boolean; created_at: string; updated_at: string }
+        Insert: { id?: string; name: string; service_type: string; description?: string | null; department?: string | null; keywords?: string[]; requirements?: string[]; active?: boolean; created_at?: string; updated_at?: string }
+        Update: { id?: string; name?: string; service_type?: string; description?: string | null; department?: string | null; keywords?: string[]; requirements?: string[]; active?: boolean; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
     Views: {
+
       [_ in never]: never
     }
     Functions: {
