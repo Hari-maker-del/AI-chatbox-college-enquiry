@@ -2,14 +2,70 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MAX_MESSAGES = 40;
+const MAX_MESSAGE_CHARS = 4000;
+const MAX_TOTAL_CHARS = 20000;
+
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonError("Request body must be valid JSON.", 400);
+    }
+
+    const rawMessages = (body ?? {}) as { messages?: unknown };
+    if (!Array.isArray(rawMessages.messages) || rawMessages.messages.length === 0) {
+      return jsonError("`messages` must be a non-empty array.", 400);
+    }
+    if (rawMessages.messages.length > MAX_MESSAGES) {
+      return jsonError(`Too many messages in one request (max ${MAX_MESSAGES}).`, 400);
+    }
+
+    const messages: ChatMessage[] = [];
+    let totalChars = 0;
+
+    for (const entry of rawMessages.messages) {
+      if (typeof entry !== "object" || entry === null) {
+        return jsonError("Each message must be an object.", 400);
+      }
+
+      const candidate = entry as { role?: unknown; content?: unknown };
+      if (
+        (candidate.role !== "user" && candidate.role !== "assistant") ||
+        typeof candidate.content !== "string"
+      ) {
+        return jsonError("Messages may only contain user/assistant roles and string content.", 400);
+      }
+
+      if (candidate.content.length > MAX_MESSAGE_CHARS) {
+        return jsonError(`A message exceeds the ${MAX_MESSAGE_CHARS} character limit.`, 400);
+      }
+
+      totalChars += candidate.content.length;
+      messages.push({ role: candidate.role, content: candidate.content });
+    }
+
+    if (totalChars > MAX_TOTAL_CHARS) {
+      return jsonError(`Total message content exceeds the ${MAX_TOTAL_CHARS} character limit.`, 400);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -24,15 +80,8 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an AI College Enquiry Assistant for a prestigious educational institution. You help students and parents with information about:
-- Admission process, eligibility, and deadlines
-- Courses offered (B.Tech, BBA, BCA, B.Sc, M.Tech, MBA, MCA, Ph.D)
-- Fee structure and scholarships
-- Hostel facilities and campus life
-- Placement records and top recruiters
-- Contact information
-
-Be helpful, professional, and provide detailed markdown-formatted responses with tables, lists, and emojis where appropriate. If you don't know something specific, suggest contacting the admission office at admission@college.edu or +91-9876543210.`,
+            content:
+              "You are the AI assistant for CampusOS, a college digital service platform. Help students and parents with admissions, courses, eligibility, fees, scholarships, campus services, applications, appointments, support, and general college information. Be concise, professional, and clear. Never invent college-specific fees, deadlines, contact details, policies, eligibility cutoffs, or other facts. When authoritative campus data is unavailable, clearly say that the information needs confirmation from the college administration.",
           },
           ...messages,
         ],
@@ -42,33 +91,20 @@ Be helpful, professional, and provide detailed markdown-formatted responses with
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError("Rate limit exceeded. Please try again later.", 429);
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI service requires payment. Please add credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError("AI service requires payment. Please add credits.", 402);
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("AI gateway error:", response.status);
+      return jsonError("AI service error. Please try again later.", 502);
     }
 
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("chat error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("chat error:", e instanceof Error ? e.message : "Unknown error");
+    return jsonError("Unable to process the chat request.", 500);
   }
 });
