@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { getStudentProfile, type StudentProfile } from "@/lib/campusos";
+import { findEligibleCourses, getStudentProfile, type StudentProfile } from "@/lib/campusos";
 import CampusServiceCatalog from "@/components/student/CampusServiceCatalog";
 import CampusNotifications from "@/components/student/CampusNotifications";
 import CampusRequestConversation from "@/components/student/CampusRequestConversation";
@@ -209,14 +209,24 @@ const Index = () => {
         if (!Number.isFinite(value) || value < 0 || value > 100) {
           throw new Error("Enter a percentage between 0 and 100.");
         }
-        const eligible = value >= 60;
+        const eligibility = await findEligibleCourses({ percentage: value, courseQuery: preferredCourse });
+        const matchedCourse = eligibility.courses[0];
         const request = await createServiceRequest({
           userId: user!.id,
           serviceType: "other",
           title: "Course Eligibility Check",
-          details: { percentage: value, preferredCourse, result: eligible ? "eligible" : "review_required" },
+          details: {
+            percentage: value,
+            preferredCourse,
+            result: matchedCourse ? "eligible" : "review_required",
+            matchedCourseId: matchedCourse?.id ?? null,
+          },
         });
-        setResultMessage(`${eligible ? "Preliminary eligibility requirement met" : "Additional eligibility review required"}. Check ${request.request_code} in My Applications.`);
+        setResultMessage(
+          matchedCourse
+            ? `Preliminary eligibility matched ${matchedCourse.name}. Check ${request.request_code} in My Applications.`
+            : `No configured course matched your details. Check ${request.request_code} in My Applications for review.`,
+        );
       }
 
       if (action === "ticket") {
