@@ -206,7 +206,8 @@ export async function createPaymentIntent(input: { userId: string; invoiceId?: s
   if (input.invoiceId) {
     const { data: invoice, error } = await db.from("campus_fee_invoices")
       .select("id,amount,status").eq("id", input.invoiceId).eq("user_id", input.userId).single();
-    if (invoiceErrorOrNone(invoice, error)) throw error;
+    if (error) throw error;
+    if (!invoice) throw new Error("Fee invoice was not found.");
     if (invoice.status === "paid" || invoice.status === "cancelled") throw new Error("This fee is no longer payable.");
     amount = invoice.amount;
   }
