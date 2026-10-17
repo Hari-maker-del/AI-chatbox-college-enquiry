@@ -1,12 +1,12 @@
-# CampusOS — Your Digital Campus
+# ONYX — AI Campus OS
 
-CampusOS is an AI-powered college service platform that turns common campus workflows into one student-first experience.
+ONYX is an AI-powered college service platform that brings common campus workflows into one student-first experience.
 
 ## Core flow
 
-**DISCOVER → REQUEST → APPLY / PROCESS → TRACK → COMPLETE**
+**DISCOVER → ASK → REQUEST / APPLY → TRACK → COMPLETE**
 
-Students can discover services, submit requests, track applications, receive notifications, message campus teams, review fee invoices, and use AI assistance. Administrators get operational views for requests, services, fees, courses, FAQs, support and campus activity.
+Students can discover services, submit requests, track applications, receive notifications, message campus teams, review fee invoices, and use the AI assistant. Administrators get operational views for requests, services, fees, courses, FAQs, support and campus activity.
 
 ## Technology
 
@@ -15,7 +15,7 @@ Students can discover services, submit requests, track applications, receive not
 - Tailwind CSS + shadcn/ui
 - Supabase Auth, Postgres, Row Level Security and Realtime
 - Supabase Edge Functions
-- AI gateway integration for the CampusOS assistant
+- AI gateway integration for the ONYX assistant
 - Vitest
 
 ## Local development
@@ -57,7 +57,7 @@ The chat function is configured with JWT verification in `supabase/config.toml`.
 
 Student-facing records are protected with Supabase RLS and are scoped to the authenticated user. Administrative operations use the separate `user_roles` table rather than client-controlled role flags.
 
-Payment records in this repository currently provide the application-side fee ledger and payment-session workflow. A production deployment still needs a real payment gateway, server-side webhook verification, and reconciliation before real money movement is enabled.
+Payment records currently provide the application-side fee ledger and payment-session workflow. A production deployment still needs a real payment gateway, server-side webhook verification, and reconciliation before real money movement is enabled.
 
 ## Project structure
 
@@ -68,20 +68,26 @@ src/
     campus/       # AI/campus intelligence
     student/      # Student services, notifications, fees and requests
   hooks/          # Authentication and UI hooks
-  lib/            # CampusOS domain logic and AI intent handling
+  lib/            # Campus domain logic and AI intent handling
   pages/          # Student and admin application shells
 
+public/campusos/  # Existing embedded campus experience (retained for compatibility)
 supabase/
   functions/chat/ # Authenticated AI chat gateway
   migrations/     # Database schema, RLS and workflow migrations
 
-public/campusos/ # CampusOS visual experience
+docs/
+  ONYX_IMPLEMENTATION_PLAN.md
 ```
+
+## ONYX visual redesign
+
+The redesign keeps the existing React application, embedded campus experience, and student service integrations. The first pass adds a dark, premium visual shell with subtle depth, grid lighting, responsive polish, and reduced-motion support. The next pass should validate the live page and tune individual components against the rendered interface.
 
 ## Important deployment note
 
-College-specific admission rules, fees, contact details and deadlines should be entered into authoritative campus data before production use. The AI assistant is instructed not to invent institution-specific facts.
+College-specific admission rules, fees, contact details and deadlines should be entered into authoritative campus data before production use. The AI assistant must not invent institution-specific facts.
 
 ## Repository
 
-urlGitHub repositoryhttps://github.com/Hari-maker-del/AI-chatbox-college-enquiry
+https://github.com/Hari-maker-del/AI-chatbox-college-enquiry
